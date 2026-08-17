@@ -6,17 +6,13 @@ import {
   cn,
   haptic,
   host,
-  ROUTES_AREA,
-  SIDEBAR_NAV_AREA,
   PALETTE_AREA,
   useQuery,
-  Tip,
 } from '@hermes/plugin-sdk'
 import { jsx, jsxs } from 'react/jsx-runtime'
 import { useState, useRef, useCallback } from 'react'
 
 const ID = 'android-emulator'
-const PAGE = '/android-emulator'
 const POLL_MS = 3000
 
 function EmulatorPane({ ctx }) {
@@ -764,32 +760,11 @@ export default {
   register(ctx) {
     ctx.registerMany([
       {
-        id: 'page',
-        area: ROUTES_AREA,
-        data: { path: PAGE },
+        id: 'pane',
+        area: 'panes',
+        title: 'Emulator',
+        data: { placement: 'right', width: '300px', dock: { pane: 'workspace', pos: 'right' } },
         render: () => jsx(EmulatorPane, { ctx }),
-      },
-      {
-        id: 'nav',
-        area: SIDEBAR_NAV_AREA,
-        data: { path: PAGE, label: 'Emulator', codicon: 'device-mobile' },
-      },
-      {
-        id: 'chip',
-        area: 'statusBar.right',
-        order: 140,
-        render: () => jsx(Tip, {
-          label: 'Toggle Emulator',
-          children: jsx('button', {
-            className: cn(
-              'inline-flex h-full items-center gap-1 px-1.5 text-[0.6875rem] transition-colors',
-              'text-(--ui-text-tertiary) hover:bg-(--chrome-action-hover) hover:text-foreground'
-            ),
-            type: 'button',
-            onClick: () => host.navigate(PAGE),
-            children: '📱 EMU',
-          }),
-        }),
       },
       {
         id: 'open',
