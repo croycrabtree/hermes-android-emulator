@@ -10,6 +10,7 @@ import {
   SIDEBAR_NAV_AREA,
   PALETTE_AREA,
   useQuery,
+  Tip,
 } from '@hermes/plugin-sdk'
 import { jsx, jsxs } from 'react/jsx-runtime'
 import { useState, useRef, useCallback } from 'react'
@@ -772,6 +773,23 @@ export default {
         id: 'nav',
         area: SIDEBAR_NAV_AREA,
         data: { path: PAGE, label: 'Emulator', codicon: 'device-mobile' },
+      },
+      {
+        id: 'chip',
+        area: 'statusBar.right',
+        order: 140,
+        render: () => jsx(Tip, {
+          label: 'Toggle Emulator',
+          children: jsx('button', {
+            className: cn(
+              'inline-flex h-full items-center gap-1 px-1.5 text-[0.6875rem] transition-colors',
+              'text-(--ui-text-tertiary) hover:bg-(--chrome-action-hover) hover:text-foreground'
+            ),
+            type: 'button',
+            onClick: () => host.navigate(PAGE),
+            children: '📱 EMU',
+          }),
+        }),
       },
       {
         id: 'open',
