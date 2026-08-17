@@ -83,7 +83,7 @@ if router is not None:
             return {"ok": True, "message": "Already running"}
         # Start in background
         subprocess.Popen(
-            [emu_bin, "-avd", "hermes-test", "-no-window", "-no-audio",
+            [emu_bin, "-avd", "pixel7pro", "-no-window", "-no-audio",
              "-no-boot-anim", "-gpu", "swiftshader_indirect",
              "-memory", "2048", "-partition-size", "4096", "-no-snapshot"],
             stdout=subprocess.DEVNULL,
@@ -94,7 +94,7 @@ if router is not None:
     @router.post("/stop")
     async def stop_emulator():
         """Stop the running emulator."""
-        _run(["pkill", "-f", "emulator.*hermes-test"], timeout=5)
+        _run(["pkill", "-f", "emulator.*pixel7pro"], timeout=5)
         _run(["pkill", "-f", "emulator.*-avd"], timeout=5)
         return {"ok": True}
 
@@ -584,7 +584,7 @@ if router is not None:
             "devices": devices,
             "installed_images": installed_images,
             "available_images": available_images,
-            "active_avd": "hermes-test",
+            "active_avd": "pixel7pro",
         }
 
     @router.post("/create")
