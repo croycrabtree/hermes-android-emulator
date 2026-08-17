@@ -248,7 +248,17 @@ function EmulatorPane({ ctx }) {
     })
   }
 
-  if (!visible) return null
+  if (!visible) {
+    return jsx('div', {
+      className: 'flex items-center justify-center h-full cursor-pointer',
+      onClick: () => setVisible(true),
+      children: jsx('span', {
+        className: 'text-[10px] text-zinc-500 hover:text-zinc-300 writing-mode-vertical',
+        style: { writingMode: 'vertical-rl' },
+        children: '📱 EMU ▶',
+      }),
+    })
+  }
   return jsxs('div', {
     className: 'flex h-full flex-col gap-1.5 p-2 text-xs overflow-hidden',
     children: [
@@ -769,7 +779,7 @@ export default {
         id: 'pane',
         area: 'panes',
         title: 'Emulator',
-        data: { placement: 'right', width: '230px' },
+        data: { placement: 'right', width: '280px', dock: { pane: 'workspace', pos: 'right' } },
         render: () => jsx(EmulatorPane, { ctx }),
       },
       {
