@@ -88,7 +88,7 @@ function EmulatorPane({ ctx }) {
       children: [
         jsx('div', { key: 'i', className: 'text-3xl', children: '📱' }),
         jsx('div', { key: 'm', className: 'text-sm', children: 'Emulator offline' }),
-        jsx('div', { key: 'c', className: 'text-[10px] text-zinc-600', children: 'Run: emu start' }),
+        jsx('div', { key: 'c', className: 'text-xs text-zinc-600', children: 'Run: emu start' }),
       ],
     })
   } else if (!imgSrc) {
@@ -116,7 +116,7 @@ function EmulatorPane({ ctx }) {
       // Status
       jsx('div', {
         className: cn(
-          'flex items-center gap-2 rounded-md px-2 py-1 text-[10px] border',
+          'flex items-center gap-2 rounded-md px-2 py-1 text-xs border',
           isOnline ? 'bg-green-950/40 border-green-800/50 text-green-300'
                    : 'bg-zinc-900 border-zinc-700 text-zinc-400'
         ),
@@ -137,7 +137,7 @@ function EmulatorPane({ ctx }) {
 
       // AVD Picker toggle
       jsx('button', {
-        className: 'flex items-center justify-between rounded-md border border-zinc-700 bg-zinc-800/50 px-2 py-1 text-[10px] text-zinc-300 hover:bg-zinc-700/50 transition-colors',
+        className: 'flex items-center justify-between rounded-md border border-zinc-700 bg-zinc-800/50 px-2 py-1 text-xs text-zinc-300 hover:bg-zinc-700/50 transition-colors',
         onClick: () => setShowPicker(!showPicker),
         children: [
           jsx('span', { key: 't', children: `📱 ${picker?.active_avd || 'Device'}` }),
@@ -150,12 +150,12 @@ function EmulatorPane({ ctx }) {
         className: 'rounded-md border border-zinc-700 bg-zinc-900 p-2 space-y-2 max-h-[400px] overflow-y-auto',
         children: [
           // Installed AVDs
-          jsx('div', { key: 'h1', className: 'text-[10px] text-zinc-400 font-medium', children: 'Installed AVDs' }),
+          jsx('div', { key: 'h1', className: 'text-xs text-zinc-400 font-medium', children: 'Installed AVDs' }),
           ...(picker?.avds || []).map((avd) =>
             jsx('button', {
               key: avd.name,
               className: cn(
-                'w-full text-left rounded border px-2 py-1.5 text-[10px] transition-colors',
+                'w-full text-left rounded border px-2 py-1.5 text-xs transition-colors',
                 avd.name === picker?.active_avd
                   ? 'border-blue-700 bg-blue-900/30 text-blue-300'
                   : 'border-zinc-700 bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
@@ -175,14 +175,14 @@ function EmulatorPane({ ctx }) {
           ),
 
           // Device profiles
-          jsx('div', { key: 'h2', className: 'text-[10px] text-zinc-400 font-medium pt-1 border-t border-zinc-800', children: '📱 Devices' }),
+          jsx('div', { key: 'h2', className: 'text-xs text-zinc-400 font-medium pt-1 border-t border-zinc-800', children: '📱 Devices' }),
           jsx('div', {
             key: 'devlist',
             className: 'grid grid-cols-2 gap-1',
             children: (picker?.devices || []).map((dev) =>
               jsx('button', {
                 key: dev.id,
-                className: 'text-left rounded border border-zinc-700 bg-zinc-800 px-1.5 py-1 text-[9px] text-zinc-300 hover:bg-zinc-700 transition-colors truncate',
+                className: 'text-left rounded border border-zinc-700 bg-zinc-800 px-1.5 py-1 text-xs text-zinc-300 hover:bg-zinc-700 transition-colors truncate',
                 onClick: async () => {
                   haptic('tap')
                   const name = `avd-${dev.id}`
@@ -201,7 +201,7 @@ function EmulatorPane({ ctx }) {
           }),
 
           // Android versions (installed + available)
-          jsx('div', { key: 'h3', className: 'text-[10px] text-zinc-400 font-medium pt-1 border-t border-zinc-800', children: '🤖 Android Versions' }),
+          jsx('div', { key: 'h3', className: 'text-xs text-zinc-400 font-medium pt-1 border-t border-zinc-800', children: '🤖 Android Versions' }),
           jsx('div', {
             key: 'apilist',
             className: 'flex flex-wrap gap-1',
@@ -209,14 +209,14 @@ function EmulatorPane({ ctx }) {
               ...(picker?.installed_images || []).map((img) =>
                 jsx('span', {
                   key: img.package,
-                  className: 'rounded-full border border-green-700 bg-green-900/30 px-2 py-0.5 text-[9px] text-green-300',
+                  className: 'rounded-full border border-green-700 bg-green-900/30 px-2 py-0.5 text-xs text-green-300',
                   children: `API ${img.api} ✓`,
                 })
               ),
               ...(picker?.available_images || []).map((img) =>
                 jsx('button', {
                   key: img.package,
-                  className: 'rounded-full border border-zinc-700 bg-zinc-800 px-2 py-0.5 text-[9px] text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 transition-colors',
+                  className: 'rounded-full border border-zinc-700 bg-zinc-800 px-2 py-0.5 text-xs text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 transition-colors',
                   onClick: async () => {
                     haptic('tap')
                     host.notify({ kind: 'info', message: `Installing API ${img.api}... this takes a minute` })
@@ -237,7 +237,7 @@ function EmulatorPane({ ctx }) {
 
           jsx('div', {
             key: 'info',
-            className: 'text-[9px] text-zinc-500 pt-1 border-t border-zinc-800',
+            className: 'text-xs text-zinc-500 pt-1 border-t border-zinc-800',
             children: 'Green = installed · Gray = click to install · Click AVD to switch',
           }),
         ],
@@ -257,7 +257,7 @@ function EmulatorPane({ ctx }) {
         ].map(([icon, label, key]) =>
           jsx('button', {
             key,
-            className: 'flex flex-col items-center gap-0.5 rounded-lg border border-zinc-700 bg-zinc-800 py-1.5 text-[10px] text-zinc-200 hover:bg-zinc-700 active:bg-zinc-600 transition-colors',
+            className: 'flex flex-col items-center gap-0.5 rounded-lg border border-zinc-700 bg-zinc-800 py-1.5 text-xs text-zinc-200 hover:bg-zinc-700 active:bg-zinc-600 transition-colors',
             onClick: () => sendKey(key),
             children: [
               jsx('span', { key: 'i', className: 'text-base leading-none', children: icon }),
@@ -274,7 +274,7 @@ function EmulatorPane({ ctx }) {
           jsx('button', {
             key: 'r',
             className: cn(
-              'flex-1 rounded-lg border py-1.5 text-[11px] font-medium transition-colors',
+              'flex-1 rounded-lg border py-1.5 text-xs font-medium transition-colors',
               autoRefresh ? 'border-blue-700 bg-blue-900/50 text-blue-300 hover:bg-blue-800/50'
                           : 'border-zinc-700 bg-zinc-800 text-zinc-200 hover:bg-zinc-700'
             ),
@@ -284,7 +284,7 @@ function EmulatorPane({ ctx }) {
           jsx('button', {
             key: 'l',
             className: cn(
-              'flex-1 rounded-lg border py-1.5 text-[11px] font-medium transition-colors',
+              'flex-1 rounded-lg border py-1.5 text-xs font-medium transition-colors',
               showLog ? 'border-amber-700 bg-amber-900/50 text-amber-300 hover:bg-amber-800/50'
                       : 'border-zinc-700 bg-zinc-800 text-zinc-200 hover:bg-zinc-700'
             ),
@@ -296,7 +296,7 @@ function EmulatorPane({ ctx }) {
 
       // Logcat
       showLog && jsx('div', {
-        className: 'flex-1 min-h-0 overflow-auto rounded bg-zinc-950 border border-zinc-800 p-1 font-mono text-[9px] leading-relaxed',
+        className: 'flex-1 min-h-0 overflow-auto rounded bg-zinc-950 border border-zinc-800 p-1 font-mono text-xs leading-relaxed',
         children: logcat.length === 0
           ? jsx('div', { className: 'text-zinc-600', children: 'No output' })
           : logcat.map((line, i) =>
@@ -316,7 +316,7 @@ function EmulatorPane({ ctx }) {
 
       // Footer
       isOnline && status?.screen_size && jsx('div', {
-        className: 'text-center text-[9px] text-zinc-600',
+        className: 'text-center text-xs text-zinc-600',
         children: `${status.screen_size}`,
       }),
     ],
