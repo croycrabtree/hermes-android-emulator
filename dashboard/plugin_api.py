@@ -334,13 +334,13 @@ if router is not None:
     @router.post("/gps/{lat}/{lng}")
     async def set_gps(lat: float, lng: float):
         """Set GPS location. Uses emulator geo fix."""
-        _adb_text("shell", "emu", "geo", "fix", str(lng), str(lat))
+        _run([ADB, "-s", _EMU_SERIAL, "emu", "geo", "fix", str(lng), str(lat)], timeout=5)
         return {"ok": True, "lat": lat, "lng": lng}
 
     @router.post("/gps/clear")
     async def clear_gps():
         """Clear GPS override."""
-        _adb_text("shell", "emu", "geo", "nmea", "$GPGGA,,,,,,0,,,,,,,,*66")
+        _run([ADB, "-s", _EMU_SERIAL, "emu", "geo", "nmea", "$GPGGA,,,,,,0,,,,,,,,*66"], timeout=5)
         return {"ok": True}
 
     # ── Battery Simulation ─────────────────────────────────────────────
