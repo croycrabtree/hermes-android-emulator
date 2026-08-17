@@ -6,7 +6,6 @@ import {
   cn,
   haptic,
   host,
-  PALETTE_AREA,
   useQuery,
 } from '@hermes/plugin-sdk'
 import { jsx, jsxs } from 'react/jsx-runtime'
@@ -765,16 +764,6 @@ export default {
         title: 'Emulator',
         data: { placement: 'right', width: '300px', dock: { pane: 'workspace', pos: 'right' } },
         render: () => jsx(EmulatorPane, { ctx }),
-      },
-      {
-        id: 'open',
-        area: PALETTE_AREA,
-        data: {
-          id: `${ID}.open`,
-          label: 'Toggle Android Emulator',
-          keywords: ['android', 'emulator', 'phone', 'device'],
-          run: () => host.navigate(PAGE),
-        },
       },
     ])
   },
