@@ -22,6 +22,7 @@ function EmulatorPane({ ctx }) {
   const [showLog, setShowLog] = useState(false)
   const [logcat, setLogcat] = useState([])
   const [autoRefresh, setAutoRefresh] = useState(true)
+  const [showPicker, setShowPicker] = useState(false)
   const imgRef = useRef(null)
 
   const statusQ = useQuery({
@@ -38,6 +39,13 @@ function EmulatorPane({ ctx }) {
     refetchInterval: autoRefresh ? POLL_MS : false,
     retry: 0,
     staleTime: 2000,
+  })
+
+  const avdsQ = useQuery({
+    queryKey: ['emu', 'avds'],
+    queryFn: () => ctx.rest('/avds', { timeoutMs: 8000 }),
+    staleTime: 30000,
+    retry: 1,
   })
 
   const status = statusQ.data || {}
@@ -124,6 +132,58 @@ function EmulatorPane({ ctx }) {
             }),
           ],
         }),
+      }),
+
+      // AVD Picker toggle
+      jsx('button', {
+        className: 'flex items-center justify-between rounded-md border border-zinc-700 bg-zinc-800/50 px-2 py-1 text-[10px] text-zinc-300 hover:bg-zinc-700/50 transition-colors',
+        onClick: () => setShowPicker(!showPicker),
+        children: [
+          jsx('span', { key: 't', children: `📱 ${avdsQ.data?.avds?.find(a => a.name === 'hermes-test')?.device || 'Device'}` }),
+          jsx('span', { key: 'a', className: 'text-zinc-500', children: showPicker ? '▲' : '▼' }),
+        ],
+      }),
+
+      // AVD Picker panel
+      showPicker && jsx('div', {
+        className: 'rounded-md border border-zinc-700 bg-zinc-900 p-2 space-y-1.5',
+        children: [
+          jsx('div', {
+            key: 'hdr',
+            className: 'text-[10px] text-zinc-400 font-medium mb-1',
+            children: 'Installed AVDs',
+          }),
+          ...(avdsQ.data?.avds || []).map((avd) =>
+            jsx('button', {
+              key: avd.name,
+              className: cn(
+                'w-full text-left rounded border px-2 py-1 text-[10px] transition-colors',
+                avd.name === 'hermes-test'
+                  ? 'border-blue-700 bg-blue-900/30 text-blue-300'
+                  : 'border-zinc-700 bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+              ),
+              onClick: async () => {
+                haptic('tap')
+                try {
+                  await ctx.rest(`/switch/${avd.name}`, { method: 'POST', timeoutMs: 5000 })
+                  host.notify({ kind: 'info', message: `Switch to ${avd.name} — run 'emu start'` })
+                } catch {}
+              },
+              children: jsxs('div', {
+                className: 'flex justify-between items-center',
+                children: [
+                  jsx('span', { className: 'font-medium', children: avd.name }),
+                  jsx('span', { className: 'text-zinc-500', children: avd.device || '' }),
+                ],
+              }),
+            })
+          ),
+          jsx('div', {
+            key: 'info',
+            className: 'text-[9px] text-zinc-500 pt-1 border-t border-zinc-800',
+            children: 'Switch AVDs from CLI: emu stop && emu start <name>',
+          }),
+        ],
       }),
 
       // Screen

@@ -124,3 +124,128 @@ if router is not None:
     async def emu_logcat(lines: int = 80):
         out, _ = _adb_text("shell", "logcat", "-d", "-t", str(lines))
         return {"lines": out.splitlines()[-lines:]}
+
+    # ── AVD picker endpoints ───────────────────────────────────────────
+
+    AVDMANAGER = os.path.expanduser(
+        "~/Android/Sdk/cmdline-tools/latest/bin/avdmanager"
+    )
+    SDKMANAGER = os.path.expanduser(
+        "~/Android/Sdk/cmdline-tools/latest/bin/sdkmanager"
+    )
+
+    @router.get("/avds")
+    async def list_avds():
+        """List installed AVDs with their device, target, and path."""
+        import re
+        out, rc = _run([AVDMANAGER, "list", "avd"], timeout=10)
+        text = out.decode("utf-8", errors="replace")
+        avds = []
+        current: dict = {}
+        for line in text.splitlines():
+            line = line.strip()
+            if line.startswith("Name:"):
+                if current:
+                    avds.append(current)
+                current = {"name": line.split(":", 1)[1].strip()}
+            elif line.startswith("Device:"):
+                current["device"] = line.split(":", 1)[1].strip()
+            elif line.startswith("Target:"):
+                current["target"] = line.split(":", 1)[1].strip()
+            elif line.startswith("Path:"):
+                current["path"] = line.split(":", 1)[1].strip()
+            elif "Based on:" in line:
+                current["based_on"] = line.split("Based on:", 1)[1].strip()
+        if current:
+            avds.append(current)
+        return {"avds": avds, "active": _EMU_SERIAL}
+
+    @router.get("/devices")
+    async def list_devices():
+        """List available device profiles for creating AVDs."""
+        import re
+        out, rc = _run([AVDMANAGER, "list", "device"], timeout=10)
+        text = out.decode("utf-8", errors="replace")
+        devices = []
+        current: dict = {}
+        for line in text.splitlines():
+            line = line.strip()
+            m = re.match(r'id:\s+\d+\s+or\s+"([^"]+)"', line)
+            if m:
+                if current:
+                    devices.append(current)
+                current = {"id": m.group(1)}
+            elif line.startswith("Name:"):
+                current["name"] = line.split(":", 1)[1].strip()
+            elif line.startswith("Size:"):
+                current["size"] = line.split(":", 1)[1].strip()
+            elif line.startswith("Resolution:"):
+                current["resolution"] = line.split(":", 1)[1].strip()
+            elif line.startswith("Density:"):
+                current["density"] = line.split(":", 1)[1].strip()
+        if current:
+            devices.append(current)
+        return {"devices": devices}
+
+    @router.get("/images")
+    async def list_images():
+        """List installed system images."""
+        out, rc = _run(
+            [SDKMANAGER, "--list_installed"], timeout=15
+        )
+        text = out.decode("utf-8", errors="replace")
+        images = []
+        for line in text.splitlines():
+            if "system-images" in line and "|" in line:
+                parts = [p.strip() for p in line.split("|")]
+                if len(parts) >= 3:
+                    images.append({
+                        "package": parts[0],
+                        "api": parts[1],
+                        "description": parts[2],
+                    })
+        return {"images": images}
+
+    @router.post("/switch/{avd_name}")
+    async def switch_avd(avd_name: str):
+        """Switch to a different AVD (stops current, starts new one)."""
+        import signal
+        # Kill current emulator
+        _run(["pkill", "-f", "emulator.*hermes-test"], timeout=5)
+        _run(["pkill", "-f", "emulator.*-avd"], timeout=5)
+        import time
+        time.sleep(2)
+        # Update the serial for this session
+        global _EMU_SERIAL
+        _EMU_SERIAL = "emulator-5554"
+        return {
+            "ok": True,
+            "message": f"Stopped current emulator. Start '{avd_name}' with: emu start {avd_name}",
+            "avd": avd_name,
+        }
+
+    @router.post("/create")
+    async def create_avd(
+        name: str = "custom",
+        device: str = "pixel_6",
+        api: str = "34",
+    ):
+        """Create a new AVD with the given name, device profile, and API level."""
+        img_pkg = f"system-images;android-{api};google_apis;x86_64"
+        # Check if image is installed
+        out, rc = _run([SDKMANAGER, "--list_installed"], timeout=10)
+        if img_pkg.encode() not in out:
+            return {
+                "ok": False,
+                "error": f"System image not installed: {img_pkg}",
+                "hint": f"Install with: sdkmanager '{img_pkg}'",
+            }
+        out, rc = _run(
+            [AVDMANAGER, "create", "avd", "-n", name, "-k", img_pkg, "-d", device, "--force"],
+            timeout=30,
+        )
+        return {
+            "ok": rc == 0,
+            "output": out.decode("utf-8", errors="replace"),
+            "avd": name,
+        }
