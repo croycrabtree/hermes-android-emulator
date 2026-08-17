@@ -42,14 +42,15 @@ function EmulatorPane({ ctx }) {
   })
 
   const avdsQ = useQuery({
-    queryKey: ['emu', 'avds'],
-    queryFn: () => ctx.rest('/avds', { timeoutMs: 8000 }),
-    staleTime: 30000,
+    queryKey: ['emu', 'picker'],
+    queryFn: () => ctx.rest('/picker', { timeoutMs: 30000 }),
+    staleTime: 60000,
     retry: 1,
   })
 
   const status = statusQ.data || {}
   const screen = screenQ.data || {}
+  const picker = avdsQ.data || {}
   const isOnline = !!status?.online
   const imgSrc = screen?.image || null
 
@@ -139,35 +140,29 @@ function EmulatorPane({ ctx }) {
         className: 'flex items-center justify-between rounded-md border border-zinc-700 bg-zinc-800/50 px-2 py-1 text-[10px] text-zinc-300 hover:bg-zinc-700/50 transition-colors',
         onClick: () => setShowPicker(!showPicker),
         children: [
-          jsx('span', { key: 't', children: `📱 ${avdsQ.data?.avds?.find(a => a.name === 'hermes-test')?.device || 'Device'}` }),
+          jsx('span', { key: 't', children: `📱 ${picker?.active_avd || 'Device'}` }),
           jsx('span', { key: 'a', className: 'text-zinc-500', children: showPicker ? '▲' : '▼' }),
         ],
       }),
 
       // AVD Picker panel
       showPicker && jsx('div', {
-        className: 'rounded-md border border-zinc-700 bg-zinc-900 p-2 space-y-1.5',
+        className: 'rounded-md border border-zinc-700 bg-zinc-900 p-2 space-y-2 max-h-[400px] overflow-y-auto',
         children: [
-          jsx('div', {
-            key: 'hdr',
-            className: 'text-[10px] text-zinc-400 font-medium mb-1',
-            children: 'Installed AVDs',
-          }),
-          ...(avdsQ.data?.avds || []).map((avd) =>
+          // Installed AVDs
+          jsx('div', { key: 'h1', className: 'text-[10px] text-zinc-400 font-medium', children: 'Installed AVDs' }),
+          ...(picker?.avds || []).map((avd) =>
             jsx('button', {
               key: avd.name,
               className: cn(
-                'w-full text-left rounded border px-2 py-1 text-[10px] transition-colors',
-                avd.name === 'hermes-test'
+                'w-full text-left rounded border px-2 py-1.5 text-[10px] transition-colors',
+                avd.name === picker?.active_avd
                   ? 'border-blue-700 bg-blue-900/30 text-blue-300'
                   : 'border-zinc-700 bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
               ),
-              onClick: async () => {
+              onClick: () => {
                 haptic('tap')
-                try {
-                  await ctx.rest(`/switch/${avd.name}`, { method: 'POST', timeoutMs: 5000 })
-                  host.notify({ kind: 'info', message: `Switch to ${avd.name} — run 'emu start'` })
-                } catch {}
+                host.notify({ kind: 'info', message: `Run: emu stop && emu start ${avd.name}` })
               },
               children: jsxs('div', {
                 className: 'flex justify-between items-center',
@@ -178,10 +173,72 @@ function EmulatorPane({ ctx }) {
               }),
             })
           ),
+
+          // Device profiles
+          jsx('div', { key: 'h2', className: 'text-[10px] text-zinc-400 font-medium pt-1 border-t border-zinc-800', children: '📱 Devices' }),
+          jsx('div', {
+            key: 'devlist',
+            className: 'grid grid-cols-2 gap-1',
+            children: (picker?.devices || []).map((dev) =>
+              jsx('button', {
+                key: dev.id,
+                className: 'text-left rounded border border-zinc-700 bg-zinc-800 px-1.5 py-1 text-[9px] text-zinc-300 hover:bg-zinc-700 transition-colors truncate',
+                onClick: async () => {
+                  haptic('tap')
+                  const name = `avd-${dev.id}`
+                  try {
+                    const r = await ctx.rest(`/create?name=${name}&device=${dev.id}&api=34`, { method: 'POST', timeoutMs: 60000 })
+                    if (r?.ok) {
+                      host.notify({ kind: 'success', message: `Created ${name}! Run: emu start ${name}` })
+                    } else {
+                      host.notify({ kind: 'error', message: r?.error || 'Failed' })
+                    }
+                  } catch { host.notify({ kind: 'error', message: 'Request failed' }) }
+                },
+                children: dev.name || dev.id,
+              })
+            ),
+          }),
+
+          // Android versions (installed + available)
+          jsx('div', { key: 'h3', className: 'text-[10px] text-zinc-400 font-medium pt-1 border-t border-zinc-800', children: '🤖 Android Versions' }),
+          jsx('div', {
+            key: 'apilist',
+            className: 'flex flex-wrap gap-1',
+            children: [
+              ...(picker?.installed_images || []).map((img) =>
+                jsx('span', {
+                  key: img.package,
+                  className: 'rounded-full border border-green-700 bg-green-900/30 px-2 py-0.5 text-[9px] text-green-300',
+                  children: `API ${img.api} ✓`,
+                })
+              ),
+              ...(picker?.available_images || []).map((img) =>
+                jsx('button', {
+                  key: img.package,
+                  className: 'rounded-full border border-zinc-700 bg-zinc-800 px-2 py-0.5 text-[9px] text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 transition-colors',
+                  onClick: async () => {
+                    haptic('tap')
+                    host.notify({ kind: 'info', message: `Installing API ${img.api}... this takes a minute` })
+                    try {
+                      const r = await ctx.rest(`/create?name=api${img.api}-test&device=pixel_6&api=${img.api}`, { method: 'POST', timeoutMs: 300000 })
+                      if (r?.ok) {
+                        host.notify({ kind: 'success', message: `Installed API ${img.api}! AVD created.` })
+                      } else {
+                        host.notify({ kind: 'error', message: r?.error || 'Install failed' })
+                      }
+                    } catch { host.notify({ kind: 'error', message: 'Request failed' }) }
+                  },
+                  children: `API ${img.api}`,
+                })
+              ),
+            ],
+          }),
+
           jsx('div', {
             key: 'info',
             className: 'text-[9px] text-zinc-500 pt-1 border-t border-zinc-800',
-            children: 'Switch AVDs from CLI: emu stop && emu start <name>',
+            children: 'Green = installed · Gray = click to install · Click AVD to switch',
           }),
         ],
       }),

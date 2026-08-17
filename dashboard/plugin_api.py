@@ -134,11 +134,13 @@ if router is not None:
         "~/Android/Sdk/cmdline-tools/latest/bin/sdkmanager"
     )
 
-    @router.get("/avds")
-    async def list_avds():
-        """List installed AVDs with their device, target, and path."""
+    @router.get("/picker")
+    async def picker_data():
+        """All data the picker needs in one call: AVDs, devices, images."""
         import re
-        out, rc = _run([AVDMANAGER, "list", "avd"], timeout=10)
+
+        # 1. Installed AVDs
+        out, _ = _run([AVDMANAGER, "list", "avd"], timeout=10)
         text = out.decode("utf-8", errors="replace")
         avds = []
         current: dict = {}
@@ -158,16 +160,12 @@ if router is not None:
                 current["based_on"] = line.split("Based on:", 1)[1].strip()
         if current:
             avds.append(current)
-        return {"avds": avds, "active": _EMU_SERIAL}
 
-    @router.get("/devices")
-    async def list_devices():
-        """List available device profiles for creating AVDs."""
-        import re
-        out, rc = _run([AVDMANAGER, "list", "device"], timeout=10)
+        # 2. Available device profiles
+        out, _ = _run([AVDMANAGER, "list", "device"], timeout=10)
         text = out.decode("utf-8", errors="replace")
         devices = []
-        current: dict = {}
+        current = {}
         for line in text.splitlines():
             line = line.strip()
             m = re.match(r'id:\s+\d+\s+or\s+"([^"]+)"', line)
@@ -185,43 +183,49 @@ if router is not None:
                 current["density"] = line.split(":", 1)[1].strip()
         if current:
             devices.append(current)
-        return {"devices": devices}
 
-    @router.get("/images")
-    async def list_images():
-        """List installed system images."""
-        out, rc = _run(
-            [SDKMANAGER, "--list_installed"], timeout=15
-        )
+        # 3. Installed system images
+        out, _ = _run([SDKMANAGER, "--list_installed"], timeout=15)
         text = out.decode("utf-8", errors="replace")
-        images = []
+        installed_images = []
         for line in text.splitlines():
             if "system-images" in line and "|" in line:
                 parts = [p.strip() for p in line.split("|")]
                 if len(parts) >= 3:
-                    images.append({
-                        "package": parts[0],
-                        "api": parts[1],
+                    pkg = parts[0]
+                    api_match = re.search(r"android-(\d+)", pkg)
+                    api = api_match.group(1) if api_match else parts[1]
+                    installed_images.append({
+                        "package": pkg,
+                        "api": api,
                         "description": parts[2],
                     })
-        return {"images": images}
 
-    @router.post("/switch/{avd_name}")
-    async def switch_avd(avd_name: str):
-        """Switch to a different AVD (stops current, starts new one)."""
-        import signal
-        # Kill current emulator
-        _run(["pkill", "-f", "emulator.*hermes-test"], timeout=5)
-        _run(["pkill", "-f", "emulator.*-avd"], timeout=5)
-        import time
-        time.sleep(2)
-        # Update the serial for this session
-        global _EMU_SERIAL
-        _EMU_SERIAL = "emulator-5554"
+        # 4. Available (not installed) system images
+        out, _ = _run([SDKMANAGER, "--list"], timeout=30)
+        text = out.decode("utf-8", errors="replace")
+        available_images = []
+        installed_pkgs = {i["package"] for i in installed_images}
+        for line in text.splitlines():
+            if "system-images" in line and "google_apis" in line and "x86_64" in line and "|" in line:
+                parts = [p.strip() for p in line.split("|")]
+                if len(parts) >= 3:
+                    pkg = parts[0]
+                    if pkg not in installed_pkgs:
+                        api_match = re.search(r"android-(\d+)", pkg)
+                        api = api_match.group(1) if api_match else parts[1]
+                        available_images.append({
+                            "package": pkg,
+                            "api": api,
+                            "description": parts[2],
+                        })
+
         return {
-            "ok": True,
-            "message": f"Stopped current emulator. Start '{avd_name}' with: emu start {avd_name}",
-            "avd": avd_name,
+            "avds": avds,
+            "devices": devices,
+            "installed_images": installed_images,
+            "available_images": available_images,
+            "active_avd": "hermes-test",
         }
 
     @router.post("/create")
@@ -230,16 +234,23 @@ if router is not None:
         device: str = "pixel_6",
         api: str = "34",
     ):
-        """Create a new AVD with the given name, device profile, and API level."""
+        """Create a new AVD. Installs system image if needed."""
         img_pkg = f"system-images;android-{api};google_apis;x86_64"
-        # Check if image is installed
-        out, rc = _run([SDKMANAGER, "--list_installed"], timeout=10)
+        # Check if image is installed, install if not
+        out, _ = _run([SDKMANAGER, "--list_installed"], timeout=10)
         if img_pkg.encode() not in out:
-            return {
-                "ok": False,
-                "error": f"System image not installed: {img_pkg}",
-                "hint": f"Install with: sdkmanager '{img_pkg}'",
-            }
+            # Install the image first
+            out, rc = _run(
+                [SDKMANAGER, img_pkg],
+                timeout=300,
+            )
+            if rc != 0:
+                return {
+                    "ok": False,
+                    "error": f"Failed to install {img_pkg}",
+                    "output": out.decode("utf-8", errors="replace"),
+                }
+        # Create the AVD
         out, rc = _run(
             [AVDMANAGER, "create", "avd", "-n", name, "-k", img_pkg, "-d", device, "--force"],
             timeout=30,
