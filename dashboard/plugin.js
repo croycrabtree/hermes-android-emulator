@@ -7,6 +7,7 @@ import {
   haptic,
   host,
   ROUTES_AREA,
+  SIDEBAR_NAV_AREA,
   PALETTE_AREA,
   useQuery,
   Tip,
@@ -15,6 +16,7 @@ import { jsx, jsxs } from 'react/jsx-runtime'
 import { useState, useRef, useCallback, useEffect } from 'react'
 
 const ID = 'android-emulator'
+const PAGE = '/android-emulator'
 const POLL_MS = 3000
 let _setVisible = null
 
@@ -783,6 +785,11 @@ export default {
         render: () => jsx(EmulatorPane, { ctx }),
       },
       {
+      {
+        id: 'nav',
+        area: SIDEBAR_NAV_AREA,
+        data: { path: PAGE, label: 'Emulator', codicon: 'device-mobile' },
+      },
         id: 'chip',
         area: 'statusBar.right',
         order: 140,
