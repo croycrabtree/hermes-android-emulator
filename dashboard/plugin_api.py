@@ -71,6 +71,33 @@ if router is not None:
         except Exception as e:
             return {"online": False, "error": str(e)}
 
+    @router.post("/start")
+    async def start_emulator():
+        """Start the emulator in background."""
+        import subprocess
+        emu_bin = os.path.expanduser("~/Android/Sdk/emulator/emulator")
+        if not os.path.isfile(emu_bin):
+            return {"ok": False, "error": "Emulator binary not found"}
+        # Check if already running
+        if _device_online():
+            return {"ok": True, "message": "Already running"}
+        # Start in background
+        subprocess.Popen(
+            [emu_bin, "-avd", "hermes-test", "-no-window", "-no-audio",
+             "-no-boot-anim", "-gpu", "swiftshader_indirect",
+             "-memory", "2048", "-partition-size", "4096", "-no-snapshot"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        return {"ok": True, "message": "Starting emulator..."}
+
+    @router.post("/stop")
+    async def stop_emulator():
+        """Stop the running emulator."""
+        _run(["pkill", "-f", "emulator.*hermes-test"], timeout=5)
+        _run(["pkill", "-f", "emulator.*-avd"], timeout=5)
+        return {"ok": True}
+
     @router.get("/screenshot")
     async def emu_screenshot():
         """Raw PNG screenshot."""

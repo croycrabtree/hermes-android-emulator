@@ -208,11 +208,23 @@ function EmulatorPane({ ctx }) {
   let screenContent
   if (!isOnline) {
     screenContent = jsx('div', {
-      className: 'flex-1 flex flex-col items-center justify-center gap-2 text-zinc-500',
+      className: 'flex-1 flex flex-col items-center justify-center gap-3 text-zinc-500',
       children: [
         jsx('div', { key: 'i', className: 'text-3xl', children: '📱' }),
         jsx('div', { key: 'm', className: 'text-sm', children: 'Emulator offline' }),
-        jsx('div', { key: 'c', className: 'text-xs text-zinc-600', children: 'Run: emu start' }),
+        jsx('button', {
+          key: 'start',
+          className: 'rounded-lg border border-green-700 bg-green-900/50 px-4 py-2 text-sm text-green-300 hover:bg-green-800/50 active:bg-green-700/50 font-medium',
+          onClick: async () => {
+            haptic('tap')
+            try {
+              await ctx.rest('/start', { method: 'POST', timeoutMs: 10000 })
+              host.notify({ kind: 'success', message: 'Starting emulator...' })
+            } catch { host.notify({ kind: 'error', message: 'Failed to start' }) }
+          },
+          children: '▶ Start Emulator',
+        }),
+        jsx('div', { key: 'c', className: 'text-[10px] text-zinc-600', children: 'Takes ~15s to boot' }),
       ],
     })
   } else if (!imgSrc) {
@@ -685,6 +697,15 @@ function EmulatorPane({ ctx }) {
             ),
             onClick: () => { fetchLogcat(); setShowLog(!showLog) },
             children: showLog ? '📜 Hide Log' : '📜 Logcat',
+          }),
+          jsx('button', {
+            key: 'stop',
+            className: 'rounded-lg border border-red-700 bg-red-900/50 py-1.5 text-xs font-medium text-red-300 hover:bg-red-800/50 transition-colors',
+            onClick: async () => {
+              haptic('tap')
+              try { await ctx.rest('/stop', { method: 'POST', timeoutMs: 5000 }) } catch {}
+            },
+            children: '⏹ Stop',
           }),
         ],
       }),
