@@ -13,13 +13,17 @@ import {
   Tip,
 } from '@hermes/plugin-sdk'
 import { jsx, jsxs } from 'react/jsx-runtime'
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 
 const ID = 'android-emulator'
 const PAGE = '/android-emulator'
 const POLL_MS = 3000
+let _setVisible = null
 
 function EmulatorPane({ ctx }) {
+  const [visible, setVisible] = useState(true)
+  useEffect(() => { _setVisible = setVisible }, [])
+  if (!visible) return null
   const [showLog, setShowLog] = useState(false)
   const [logcat, setLogcat] = useState([])
   const [autoRefresh, setAutoRefresh] = useState(true)
@@ -764,9 +768,10 @@ export default {
   register(ctx) {
     ctx.registerMany([
       {
-        id: 'page',
-        area: ROUTES_AREA,
-        data: { path: PAGE },
+        id: 'pane',
+        area: 'panes',
+        title: 'Emulator',
+        data: { placement: 'right', width: '280px' },
         render: () => jsx(EmulatorPane, { ctx }),
       },
       {
@@ -786,7 +791,7 @@ export default {
               'text-(--ui-text-tertiary) hover:bg-(--chrome-action-hover) hover:text-foreground'
             ),
             type: 'button',
-            onClick: () => host.navigate(PAGE),
+            onClick: () => { haptic('tap'); if (_setVisible) _setVisible(v => !v) },
             children: '📱 EMU',
           }),
         }),
@@ -798,7 +803,7 @@ export default {
           id: `${ID}.open`,
           label: 'Toggle Android Emulator',
           keywords: ['android', 'emulator', 'phone', 'device'],
-          run: () => host.navigate(PAGE),
+          run: () => { if (_setVisible) _setVisible(v => !v) },
         },
       },
     ])
