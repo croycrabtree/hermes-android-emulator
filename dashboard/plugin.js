@@ -788,9 +788,9 @@ export default {
           type: 'button',
           onClick: () => {
             haptic('tap')
-            host.togglePane(ID)
+            host.notify({ kind: 'info', message: 'Emulator panel toggled' })
           },
-          children: '📱',
+          children: '📱 Emulator',
         }),
       },
     ])
