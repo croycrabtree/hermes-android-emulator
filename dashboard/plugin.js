@@ -461,27 +461,44 @@ function EmulatorPane({ ctx }) {
         className: 'flex items-center justify-between rounded-md border border-zinc-700 bg-zinc-800/50 px-2 py-1 text-xs text-zinc-300 hover:bg-zinc-700/50',
         onClick: () => { if (!showApps) fetchApps(); setShowApps(!showApps) },
         children: [
-          jsx('span', { key: 't', children: `📦 Apps (${apps.length})` }),
+          jsx('span', { key: 't', children: `📦 Apps` }),
           jsx('span', { key: 'a', className: 'text-zinc-500', children: showApps ? '▲' : '▼' }),
         ],
       }),
 
       // App list
       showApps && jsx('div', {
-        className: 'rounded border border-zinc-700 bg-zinc-900 p-1 max-h-[150px] overflow-y-auto space-y-0.5',
+        className: 'rounded border border-zinc-700 bg-zinc-900 p-1 max-h-[200px] overflow-y-auto space-y-0.5',
         children: apps.length === 0
           ? jsx('div', { className: 'text-xs text-zinc-500 p-1', children: 'Loading apps...' })
-          : apps.map((app) =>
-            jsx('button', {
-              key: app.package,
-              className: 'w-full flex justify-between items-center rounded px-2 py-1 text-xs text-zinc-300 hover:bg-zinc-700 transition-colors',
-              onClick: () => launchApp(app.package),
-              children: [
-                jsx('span', { className: 'truncate flex-1 text-left', children: app.label }),
-                jsx('span', { className: 'text-zinc-500 text-[10px] ml-1 shrink-0', children: '▶' }),
-              ],
-            })
-          ),
+          : [
+              // User apps section
+              jsx('div', { key: 'uh', className: 'text-[10px] text-blue-400 font-medium px-2 pt-1', children: `📱 Your Apps (${apps.filter(a => a.type === 'user').length})` }),
+              ...apps.filter(a => a.type === 'user').map((app) =>
+                jsx('button', {
+                  key: app.package,
+                  className: 'w-full flex justify-between items-center rounded px-2 py-1 text-xs text-zinc-200 hover:bg-zinc-700 transition-colors',
+                  onClick: () => launchApp(app.package),
+                  children: [
+                    jsx('span', { className: 'truncate flex-1 text-left font-medium', children: app.label }),
+                    jsx('span', { className: 'text-zinc-500 text-[10px] ml-1 shrink-0', children: '▶' }),
+                  ],
+                })
+              ),
+              // System apps section
+              jsx('div', { key: 'sh', className: 'text-[10px] text-zinc-500 font-medium px-2 pt-1 border-t border-zinc-800 mt-1', children: `⚙ System Apps (${apps.filter(a => a.type === 'system').length})` }),
+              ...apps.filter(a => a.type === 'system').map((app) =>
+                jsx('button', {
+                  key: app.package,
+                  className: 'w-full flex justify-between items-center rounded px-2 py-1 text-[10px] text-zinc-400 hover:bg-zinc-700 transition-colors',
+                  onClick: () => launchApp(app.package),
+                  children: [
+                    jsx('span', { className: 'truncate flex-1 text-left', children: app.label }),
+                    jsx('span', { className: 'text-zinc-600 text-[9px] ml-1 shrink-0', children: '▶' }),
+                  ],
+                })
+              ),
+            ],
       }),
 
       // Tools row

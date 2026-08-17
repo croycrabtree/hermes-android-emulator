@@ -158,7 +158,7 @@ if router is not None:
 
     @router.get("/apps")
     async def list_apps(filter: str = ""):
-        """List installed packages with labels. Filter by keyword."""
+        """List installed packages. User apps first, then system apps."""
         cmd = ["shell", "pm", "list", "packages"]
         if filter:
             cmd.append(filter)
@@ -168,16 +168,27 @@ if router is not None:
             for line in out.splitlines()
             if line.startswith("package:")
         ]
-        # Skip obvious overlay/internal packages
-        skip = ("com.android.internal.", "com.google.android.overlay.", "auto_generated_rro")
-        packages = [p for p in packages if not any(s in p for s in skip)]
+        # Categorize: user-installed vs system
+        system_prefixes = ("com.android.", "com.google.", "android.", "com.qualcomm", "com.qti", "com.android.internal")
+        overlay_skip = ("auto_generated_rro", "com.android.internal.emulation")
+        user_pkgs = []
+        system_pkgs = []
+        for pkg in packages:
+            if any(s in pkg for s in overlay_skip):
+                continue
+            if any(pkg.startswith(s) for s in system_prefixes):
+                system_pkgs.append(pkg)
+            else:
+                user_pkgs.append(pkg)
+        # Build list: user apps first with labels, then system apps
         apps = []
-        for pkg in sorted(packages):
-            # Derive a readable label from package name
-            parts = pkg.split(".")
-            label = parts[-1].replace("_", " ").title()
-            apps.append({"package": pkg, "label": label})
-        return {"apps": apps, "count": len(apps)}
+        for pkg in sorted(user_pkgs):
+            label = pkg.split(".")[-1].replace("_", " ").title()
+            apps.append({"package": pkg, "label": label, "type": "user"})
+        for pkg in sorted(system_pkgs)[:30]:
+            label = pkg.split(".")[-1].replace("_", " ").title()
+            apps.append({"package": pkg, "label": label, "type": "system"})
+        return {"apps": apps, "count": len(apps), "user_count": len(user_pkgs)}
 
     @router.post("/apps/launch")
     async def launch_app(package: str):
