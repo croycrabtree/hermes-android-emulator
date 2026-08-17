@@ -22,15 +22,9 @@ let _setVisible = null
 
 function EmulatorPane({ ctx }) {
   const [visible, setVisible] = useState(true)
-  // Register globally so chip can toggle
-  useEffect(() => { _setVisible = setVisible; _visible = true }, [])
+  useEffect(() => { _setVisible = setVisible }, [])
 
-  if (!visible) {
-    return jsx('div', {
-      className: 'flex items-center justify-center h-full text-zinc-500 text-xs',
-      children: '📱 Emulator hidden — click the phone icon to show',
-    })
-  }
+  if (!visible) return null
 
   return jsx(EmulatorContent, { ctx })
 }
