@@ -159,7 +159,7 @@ if router is not None:
     @router.get("/apps")
     async def list_apps(filter: str = ""):
         """List installed packages with labels. Filter by keyword."""
-        cmd = ["shell", "pm", "list", "packages", "-3"]  # third-party only by default
+        cmd = ["shell", "pm", "list", "packages"]
         if filter:
             cmd.append(filter)
         out, _ = _adb_text(*cmd)
@@ -168,18 +168,25 @@ if router is not None:
             for line in out.splitlines()
             if line.startswith("package:")
         ]
-        # Get app labels via dumpsys
+        # Filter out obvious system internals
+        skip_prefixes = ("com.android.", "com.google.", "android.", "com.qualcomm", "com.qti")
+        user_pkgs = [p for p in packages if not any(p.startswith(s) for s in skip_prefixes)]
+        system_pkgs = [p for p in packages if any(p.startswith(s) for s in skip_prefixes)]
+        # Prioritize user-installed, then add some system apps
+        display_pkgs = user_pkgs + system_pkgs[:20]
+        # Get labels for user apps (faster)
         apps = []
-        for pkg in packages[:50]:  # cap at50
-            label_out, _ = _adb_text(
-                "shell", "dumpsys", "package", pkg,
-            )
-            # Extract label from the dump
-            label = pkg.split(".")[-1].capitalize()
-            for line in label_out.splitlines():
-                if "label=" in line:
-                    label = line.split("label=")[1].strip()
-                    break
+        for pkg in display_pkgs[:60]:
+            label = pkg.split(".")[-1].replace("_", " ").title()
+            # Try to get real label for user apps
+            if not any(pkg.startswith(s) for s in skip_prefixes):
+                label_out, _ = _adb_text("shell", "dumpsys", "package", pkg)
+                for line in label_out.splitlines():
+                    if "label=" in line:
+                        real_label = line.split("label=")[1].strip()
+                        if real_label and real_label != "null":
+                            label = real_label
+                        break
             apps.append({"package": pkg, "label": label})
         return {"apps": apps, "count": len(apps)}
 
