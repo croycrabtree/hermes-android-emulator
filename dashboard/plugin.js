@@ -23,6 +23,12 @@ function EmulatorPane({ ctx }) {
   const [logcat, setLogcat] = useState([])
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [showPicker, setShowPicker] = useState(false)
+  const [showApps, setShowApps] = useState(false)
+  const [apps, setApps] = useState([])
+  const [textInput, setTextInput] = useState('')
+  const [showTools, setShowTools] = useState(false)
+  const [shellCmd, setShellCmd] = useState('')
+  const [shellOut, setShellOut] = useState('')
   const imgRef = useRef(null)
 
   const statusQ = useQuery({
@@ -80,6 +86,58 @@ function EmulatorPane({ ctx }) {
       setLogcat(d?.lines || [])
     } catch {}
   }
+
+  const sendSwipe = useCallback(async (dir) => {
+    haptic('tap')
+    try { await ctx.rest(`/swipe/${dir}`, { method: 'POST', timeoutMs: 3000 }) } catch {}
+  }, [ctx])
+
+  const fetchApps = useCallback(async () => {
+    try {
+      const d = await ctx.rest('/apps', { timeoutMs: 10000 })
+      setApps(d?.apps || [])
+    } catch {}
+  }, [ctx])
+
+  const launchApp = useCallback(async (pkg) => {
+    haptic('tap')
+    try {
+      await ctx.rest(`/apps/launch?package=${encodeURIComponent(pkg)}`, { method: 'POST', timeoutMs: 5000 })
+    } catch {}
+  }, [ctx])
+
+  const sendText = useCallback(async () => {
+    if (!textInput) return
+    haptic('tap')
+    try {
+      await ctx.rest(`/type?text=${encodeURIComponent(textInput)}`, { method: 'POST', timeoutMs: 3000 })
+      setTextInput('')
+    } catch {}
+  }, [ctx, textInput])
+
+  const saveScreenshot = useCallback(async () => {
+    haptic('tap')
+    try {
+      const r = await ctx.rest('/screenshot/save', { method: 'POST', timeoutMs: 5000 })
+      if (r?.ok) host.notify({ kind: 'success', message: 'Screenshot saved' })
+    } catch {}
+  }, [ctx])
+
+  const toggleNetwork = useCallback(async (cond) => {
+    haptic('tap')
+    try {
+      await ctx.rest(`/network/${cond}`, { method: 'POST', timeoutMs: 5000 })
+      host.notify({ kind: 'info', message: `Network: ${cond}` })
+    } catch {}
+  }, [ctx])
+
+  const runShell = useCallback(async () => {
+    if (!shellCmd) return
+    try {
+      const r = await ctx.rest(`/shell?command=${encodeURIComponent(shellCmd)}`, { method: 'POST', timeoutMs: 15000 })
+      setShellOut(r?.stdout || 'no output')
+    } catch { setShellOut('request failed') }
+  }, [ctx, shellCmd])
 
   let screenContent
   if (!isOnline) {
@@ -265,6 +323,147 @@ function EmulatorPane({ ctx }) {
             ],
           })
         ),
+      }),
+
+      // Swipe directions
+      jsx('div', {
+        className: 'grid grid-cols-4 gap-1',
+        children: [
+          ['↖', 'left', ''],
+          ['⬆', 'up', ''],
+          ['⬇', 'down', ''],
+          ['➡', 'right', ''],
+        ].map(([icon, dir]) =>
+          jsx('button', {
+            key: dir,
+            className: 'rounded border border-zinc-700 bg-zinc-800 py-1 text-xs text-zinc-300 hover:bg-zinc-700 active:bg-zinc-600',
+            onClick: () => sendSwipe(dir),
+            children: icon,
+          })
+        ),
+      }),
+
+      // Text input
+      jsx('div', {
+        className: 'flex gap-1',
+        children: [
+          jsx('input', {
+            key: 'input',
+            type: 'text',
+            value: textInput,
+            onChange: (e) => setTextInput(e.target.value),
+            onKeyDown: (e) => { if (e.key === 'Enter') sendText() },
+            placeholder: 'Type text...',
+            className: 'flex-1 rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-xs text-zinc-200 placeholder-zinc-500 outline-none focus:border-blue-600',
+          }),
+          jsx('button', {
+            key: 'send',
+            className: 'rounded border border-blue-700 bg-blue-900/50 px-2 py-1 text-xs text-blue-300 hover:bg-blue-800/50',
+            onClick: sendText,
+            children: '⌨ Send',
+          }),
+        ],
+      }),
+
+      // App drawer toggle
+      jsx('button', {
+        className: 'flex items-center justify-between rounded-md border border-zinc-700 bg-zinc-800/50 px-2 py-1 text-xs text-zinc-300 hover:bg-zinc-700/50',
+        onClick: () => { if (!showApps) fetchApps(); setShowApps(!showApps) },
+        children: [
+          jsx('span', { key: 't', children: `📦 Apps (${apps.length})` }),
+          jsx('span', { key: 'a', className: 'text-zinc-500', children: showApps ? '▲' : '▼' }),
+        ],
+      }),
+
+      // App list
+      showApps && jsx('div', {
+        className: 'rounded border border-zinc-700 bg-zinc-900 p-1 max-h-[150px] overflow-y-auto space-y-0.5',
+        children: apps.length === 0
+          ? jsx('div', { className: 'text-xs text-zinc-500 p-1', children: 'Loading apps...' })
+          : apps.map((app) =>
+            jsx('button', {
+              key: app.package,
+              className: 'w-full flex justify-between items-center rounded px-2 py-1 text-xs text-zinc-300 hover:bg-zinc-700 transition-colors',
+              onClick: () => launchApp(app.package),
+              children: [
+                jsx('span', { className: 'truncate flex-1 text-left', children: app.label }),
+                jsx('span', { className: 'text-zinc-500 text-[10px] ml-1 shrink-0', children: '▶' }),
+              ],
+            })
+          ),
+      }),
+
+      // Tools row
+      jsx('div', {
+        className: 'grid grid-cols-4 gap-1',
+        children: [
+          ['📸', 'Save', () => saveScreenshot()],
+          ['🌐', 'Net', () => setShowTools(!showTools)],
+          ['⏺', 'Rec', async () => {
+            haptic('tap')
+            try { await ctx.rest('/record/start', { method: 'POST' }); host.notify({ kind: 'info', message: 'Recording...' }) } catch {}
+          }],
+          ['💻', 'Shell', () => setShowTools(!showTools)],
+        ].map(([icon, label, fn]) =>
+          jsx('button', {
+            key: label,
+            className: 'flex flex-col items-center gap-0.5 rounded border border-zinc-700 bg-zinc-800 py-1 text-[10px] text-zinc-300 hover:bg-zinc-700',
+            onClick: fn,
+            children: [
+              jsx('span', { key: 'i', className: 'text-sm', children: icon }),
+              jsx('span', { key: 'l', children: label }),
+            ],
+          })
+        ),
+      }),
+
+      // Tools panel (network sim + shell)
+      showTools && jsx('div', {
+        className: 'rounded border border-zinc-700 bg-zinc-900 p-2 space-y-1.5',
+        children: [
+          // Network sim
+          jsx('div', { key: 'nh', className: 'text-xs text-zinc-400 font-medium', children: '🌐 Network' }),
+          jsx('div', {
+            key: 'nb',
+            className: 'flex gap-1',
+            children: ['offline', 'slow', 'fast'].map((cond) =>
+              jsx('button', {
+                key: cond,
+                className: 'flex-1 rounded border border-zinc-700 bg-zinc-800 py-1 text-xs text-zinc-300 hover:bg-zinc-700',
+                onClick: () => toggleNetwork(cond),
+                children: cond,
+              })
+            ),
+          }),
+          // ADB shell
+          jsx('div', { key: 'sh', className: 'text-xs text-zinc-400 font-medium pt-1', children: '💻 ADB Shell' }),
+          jsx('div', {
+            key: 'si',
+            className: 'flex gap-1',
+            children: [
+              jsx('input', {
+                key: 'in',
+                type: 'text',
+                value: shellCmd,
+                onChange: (e) => setShellCmd(e.target.value),
+                onKeyDown: (e) => { if (e.key === 'Enter') runShell() },
+                placeholder: 'ls /sdcard',
+                className: 'flex-1 rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-xs text-zinc-200 placeholder-zinc-500 outline-none focus:border-blue-600 font-mono',
+              }),
+              jsx('button', {
+                key: 'go',
+                className: 'rounded border border-blue-700 bg-blue-900/50 px-2 py-1 text-xs text-blue-300',
+                onClick: runShell,
+                children: 'Run',
+              }),
+            ],
+          }),
+          shellOut && jsx('pre', {
+            key: 'so',
+            className: 'rounded bg-zinc-950 border border-zinc-800 p-1 text-[10px] text-zinc-400 max-h-[80px] overflow-auto font-mono whitespace-pre-wrap',
+            children: shellOut,
+          }),
+        ],
       }),
 
       // Controls

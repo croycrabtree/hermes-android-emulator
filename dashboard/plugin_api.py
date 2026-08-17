@@ -125,6 +125,176 @@ if router is not None:
         out, _ = _adb_text("shell", "logcat", "-d", "-t", str(lines))
         return {"lines": out.splitlines()[-lines:]}
 
+    # ── Batch 1: App drawer, text input, swipes, screenshots ──────────
+
+    SCREENSHOT_DIR = os.path.expanduser("~/.hermes/emulator-screenshots")
+
+    @router.get("/apps")
+    async def list_apps(filter: str = ""):
+        """List installed packages with labels. Filter by keyword."""
+        cmd = ["shell", "pm", "list", "packages", "-3"]  # third-party only by default
+        if filter:
+            cmd.append(filter)
+        out, _ = _adb_text(*cmd)
+        packages = [
+            line.replace("package:", "").strip()
+            for line in out.splitlines()
+            if line.startswith("package:")
+        ]
+        # Get app labels via dumpsys
+        apps = []
+        for pkg in packages[:50]:  # cap at50
+            label_out, _ = _adb_text(
+                "shell", "dumpsys", "package", pkg,
+            )
+            # Extract label from the dump
+            label = pkg.split(".")[-1].capitalize()
+            for line in label_out.splitlines():
+                if "label=" in line:
+                    label = line.split("label=")[1].strip()
+                    break
+            apps.append({"package": pkg, "label": label})
+        return {"apps": apps, "count": len(apps)}
+
+    @router.post("/apps/launch")
+    async def launch_app(package: str):
+        """Launch an app by package name."""
+        out, rc = _adb_text(
+            "shell", "monkey", "-p", package,
+            "-c", "android.intent.category.LAUNCHER", "1",
+        )
+        return {"ok": rc == 0, "output": out}
+
+    @router.post("/apps/uninstall")
+    async def uninstall_app(package: str):
+        """Uninstall an app by package name."""
+        out, rc = _adb_text("uninstall", package)
+        return {"ok": rc == 0, "output": out}
+
+    @router.post("/type")
+    async def type_text(text: str):
+        """Type text into the focused field. Use %s for spaces."""
+        _adb_text("shell", "input", "text", text)
+        return {"ok": True}
+
+    @router.post("/swipe/{direction}")
+    async def swipe(direction: str, distance: int = 500):
+        """Swipe in a direction: up, down, left, right."""
+        cx, cy = 540, 1200  # center of screen
+        moves = {
+            "up": (cx, cy + distance // 2, cx, cy - distance // 2),
+            "down": (cx, cy - distance // 2, cx, cy + distance // 2),
+            "left": (cx + distance // 2, cy, cx - distance // 2, cy),
+            "right": (cx - distance // 2, cy, cx + distance // 2, cy),
+        }
+        if direction not in moves:
+            return {"ok": False, "error": f"Unknown direction: {direction}"}
+        x1, y1, x2, y2 = moves[direction]
+        _adb_text("shell", "input", "swipe", str(x1), str(y1), str(x2), str(y2), "300")
+        return {"ok": True, "direction": direction}
+
+    @router.post("/pinch/{action}")
+    async def pinch(action: str):
+        """Pinch in or out (zoom). Uses two-finger swipe."""
+        cx, cy = 540, 1200
+        if action == "in":
+            # Two fingers move toward center
+            _adb_text("shell", "input", "swipe", "340", "1000", "440", "1100", "500")
+            _adb_text("shell", "input", "swipe", "740", "1400", "640", "1300", "500")
+        elif action == "out":
+            # Two fingers move away from center
+            _adb_text("shell", "input", "swipe", "440", "1100", "340", "1000", "500")
+            _adb_text("shell", "input", "swipe", "640", "1300", "740", "1400", "500")
+        else:
+            return {"ok": False, "error": f"Unknown action: {action}"}
+        return {"ok": True, "action": action}
+
+    @router.post("/screenshot/save")
+    async def save_screenshot(label: str = ""):
+        """Save current screenshot to gallery."""
+        os.makedirs(SCREENSHOT_DIR, exist_ok=True)
+        ts = int(time.time())
+        name = f"{ts}_{label}.png" if label else f"{ts}.png"
+        path = os.path.join(SCREENSHOT_DIR, name)
+        out, rc = _run([ADB, "-s", _EMU_SERIAL, "exec-out", "screencap", "-p"], timeout=5)
+        if rc != 0 or len(out) < 100:
+            return {"ok": False, "error": "screencap failed"}
+        with open(path, "wb") as f:
+            f.write(out)
+        return {"ok": True, "path": path, "size": len(out)}
+
+    @router.get("/screenshot/gallery")
+    async def screenshot_gallery(limit: int = 20):
+        """List saved screenshots."""
+        if not os.path.isdir(SCREENSHOT_DIR):
+            return {"screenshots": [], "count": 0}
+        files = sorted(os.listdir(SCREENSHOT_DIR), reverse=True)[:limit]
+        screenshots = []
+        for f in files:
+            if f.endswith(".png"):
+                path = os.path.join(SCREENSHOT_DIR, f)
+                screenshots.append({
+                    "name": f,
+                    "path": path,
+                    "size": os.path.getsize(path),
+                    "time": os.path.getmtime(path),
+                })
+        return {"screenshots": screenshots, "count": len(screenshots)}
+
+    @router.get("/screenshot/file/{filename}")
+    async def screenshot_file(filename: str):
+        """Serve a saved screenshot."""
+        from fastapi.responses import Response
+        path = os.path.join(SCREENSHOT_DIR, filename)
+        if not os.path.isfile(path):
+            return Response(content=b"", status_code=404)
+        with open(path, "rb") as f:
+            data = f.read()
+        return Response(content=data, media_type="image/png")
+
+    @router.post("/network/{condition}")
+    async def network_condition(condition: str):
+        """Simulate network: offline, slow, fast."""
+        if condition == "offline":
+            _adb_text("shell", "svc", "wifi", "disable")
+            _adb_text("shell", "svc", "data", "disable")
+        elif condition == "slow":
+            _adb_text("shell", "svc", "wifi", "enable")
+            _adb_text("shell", "svc", "data", "enable")
+            # Use tc for traffic shaping (requires root, emulator has it)
+            _adb_text("shell", "tc", "qdisc", "add", "dev", "wlan0", "root", "netem", "delay", "500ms", "loss", "10%")
+        elif condition == "fast":
+            _adb_text("shell", "tc", "qdisc", "del", "dev", "wlan0", "root")
+            _adb_text("shell", "svc", "wifi", "enable")
+            _adb_text("shell", "svc", "data", "enable")
+        else:
+            return {"ok": False, "error": f"Unknown condition: {condition}"}
+        return {"ok": True, "condition": condition}
+
+    @router.post("/record/start")
+    async def start_recording():
+        """Start screen recording (max3 min)."""
+        _adb_text("shell", "screenrecord", "--time-limit", "180", "/sdcard/hermes_recording.mp4")
+        return {"ok": True, "message": "Recording started (max3 min)"}
+
+    @router.post("/record/stop")
+    async def stop_recording():
+        """Stop screen recording and pull the file."""
+        _adb_text("shell", "pkill", "-INT", "screenrecord")
+        import time
+        time.sleep(2)
+        os.makedirs(SCREENSHOT_DIR, exist_ok=True)
+        ts = int(time.time())
+        local_path = os.path.join(SCREENSHOT_DIR, f"recording_{ts}.mp4")
+        _adb_text("pull", "/sdcard/hermes_recording.mp4", local_path)
+        return {"ok": True, "path": local_path}
+
+    @router.post("/shell")
+    async def run_shell(command: str):
+        """Run an arbitrary adb shell command."""
+        out, rc = _adb_text("shell", "sh", "-c", command, timeout=30)
+        return {"stdout": out, "exit_code": rc}
+
     # ── AVD picker endpoints ───────────────────────────────────────────
 
     AVDMANAGER = os.path.expanduser(
