@@ -295,6 +295,161 @@ if router is not None:
         out, rc = _adb_text("shell", "sh", "-c", command, timeout=30)
         return {"stdout": out, "exit_code": rc}
 
+    # ── GPS Location ───────────────────────────────────────────────────
+
+    @router.post("/gps/{lat}/{lng}")
+    async def set_gps(lat: float, lng: float):
+        """Set GPS location. Uses emulator geo fix."""
+        _adb_text("shell", "emu", "geo", "fix", str(lng), str(lat))
+        return {"ok": True, "lat": lat, "lng": lng}
+
+    @router.post("/gps/clear")
+    async def clear_gps():
+        """Clear GPS override."""
+        _adb_text("shell", "emu", "geo", "nmea", "$GPGGA,,,,,,0,,,,,,,,*66")
+        return {"ok": True}
+
+    # ── Battery Simulation ─────────────────────────────────────────────
+
+    @router.post("/battery/{level}")
+    async def set_battery(level: int):
+        """Set battery level (0-100)."""
+        _adb_text("shell", "dumpsys", "battery", "set", "level", str(max(0, min(100, level))))
+        return {"ok": True, "level": level}
+
+    @router.post("/battery/reset")
+    async def reset_battery():
+        """Reset battery to real values."""
+        _adb_text("shell", "dumpsys", "battery", "reset")
+        return {"ok": True}
+
+    @router.post("/battery/unplug")
+    async def unplug_battery():
+        """Simulate unplugged (draining)."""
+        _adb_text("shell", "dumpsys", "battery", "unplug")
+        return {"ok": True}
+
+    # ── Deep Links ─────────────────────────────────────────────────────
+
+    @router.post("/deeplink")
+    async def open_deeplink(url: str):
+        """Open a deep link / URL scheme."""
+        _adb_text("shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", url)
+        return {"ok": True, "url": url}
+
+    # ── Push Notifications ─────────────────────────────────────────────
+
+    @router.post("/notification")
+    async def send_notification(title: str = "Test", body: str = "From Hermes"):
+        """Send a test notification via adb."""
+        # Use am broadcast to simulate a notification
+        _adb_text(
+            "shell", "am", "broadcast",
+            "-a", "android.intent.action.VIEW",
+            "-n", "com.android.systemui/.NotificationReceiver",
+            "--es", "title", title,
+            "--es", "body", body,
+        )
+        # Fallback: use notification service if available
+        _adb_text(
+            "shell", "service", "call", "notification", "1",
+            "s16", title, "s16", body,
+        )
+        return {"ok": True, "title": title, "body": body}
+
+    # ── Record & Replay ────────────────────────────────────────────────
+
+    REPLAY_DIR = os.path.expanduser("~/.hermes/emulator-recordings")
+
+    @router.post("/replay/record/start")
+    async def start_replay_record():
+        """Start recording touch events."""
+        os.makedirs(REPLAY_DIR, exist_ok=True)
+        # Use getevent to capture touch events in background
+        _adb_text("shell", "getevent", "-t", "/dev/input/event12", ">", "/sdcard/replay.txt")
+        return {"ok": True, "message": "Recording touch events..."}
+
+    @router.post("/replay/record/stop")
+    async def stop_replay_record():
+        """Stop recording touch events and save."""
+        _adb_text("shell", "pkill", "-INT", "getevent")
+        import time
+        time.sleep(1)
+        ts = int(time.time())
+        local_path = os.path.join(REPLAY_DIR, f"replay_{ts}.txt")
+        _adb_text("pull", "/sdcard/replay.txt", local_path)
+        return {"ok": True, "path": local_path}
+
+    @router.post("/replay/play")
+    async def play_replay(file: str = ""):
+        """Play back a recorded touch sequence."""
+        if not file:
+            # Find latest
+            if not os.path.isdir(REPLAY_DIR):
+                return {"ok": False, "error": "No recordings"}
+            files = sorted(os.listdir(REPLAY_DIR), reverse=True)
+            if not files:
+                return {"ok": False, "error": "No recordings"}
+            file = os.path.join(REPLAY_DIR, files[0])
+        # Push and replay
+        _adb_text("push", file, "/sdcard/replay.txt")
+        _adb_text("shell", "sh", "-c", "cat /sdcard/replay.txt | sendevent /dev/input/event12")
+        return {"ok": True, "file": file}
+
+    # ── Test Runner ────────────────────────────────────────────────────
+
+    @router.post("/test/run")
+    async def run_tests(package: str = "com.example.pir8sales.dev", runner: str = "androidx.test.runner.AndroidJUnitRunner"):
+        """Run instrumented tests and return results."""
+        out, rc = _adb_text(
+            "shell", "am", "instrument", "-w",
+            f"{package}.test/{runner}",
+            timeout=300,
+        )
+        return {"ok": rc == 0, "output": out, "exit_code": rc}
+
+    # ── AVD Management ─────────────────────────────────────────────────
+
+    @router.post("/avd/delete")
+    async def delete_avd(name: str):
+        """Delete an AVD."""
+        out, rc = _run([AVDMANAGER, "delete", "avd", "-n", name], timeout=15)
+        return {"ok": rc == 0, "output": out.decode("utf-8", errors="replace")}
+
+    @router.post("/avd/wipe")
+    async def wipe_avd(name: str):
+        """Factory reset an AVD (wipe userdata)."""
+        avd_dir = os.path.expanduser(f"~/.android/avd/{name}.avd")
+        userdata = os.path.join(avd_dir, "userdata.img")
+        userdata_qcow = os.path.join(avd_dir, "userdata-qemu.img")
+        wiped = False
+        for f in [userdata, userdata_qcow]:
+            if os.path.isfile(f):
+                os.remove(f)
+                wiped = True
+        # Also clear the userdata-qemu2.img if present
+        for f in os.listdir(avd_dir) if os.path.isdir(avd_dir) else []:
+            if "userdata" in f and f.endswith(".img"):
+                os.remove(os.path.join(avd_dir, f))
+                wiped = True
+        return {"ok": wiped, "avd": name}
+
+    # ── Keyboard Shortcuts (handled by frontend) ───────────────────────
+
+    @router.get("/shortcuts")
+    async def get_shortcuts():
+        """Return keyboard shortcut mappings."""
+        return {
+            "shortcuts": [
+                {"key": "Ctrl+S", "action": "screenshot", "label": "Save Screenshot"},
+                {"key": "Ctrl+R", "action": "record", "label": "Toggle Recording"},
+                {"key": "Ctrl+H", "action": "home", "label": "Home"},
+                {"key": "Ctrl+B", "action": "back", "label": "Back"},
+                {"key": "Ctrl+L", "action": "logcat", "label": "Toggle Logcat"},
+                {"key": "Ctrl+G", "action": "gallery", "label": "Screenshot Gallery"},
+            ]
+        }
+
     # ── AVD picker endpoints ───────────────────────────────────────────
 
     AVDMANAGER = os.path.expanduser(

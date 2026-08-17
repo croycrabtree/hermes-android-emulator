@@ -29,6 +29,17 @@ function EmulatorPane({ ctx }) {
   const [showTools, setShowTools] = useState(false)
   const [shellCmd, setShellCmd] = useState('')
   const [shellOut, setShellOut] = useState('')
+  const [showMore, setShowMore] = useState(false)
+  const [gallery, setGallery] = useState([])
+  const [showGallery, setShowGallery] = useState(false)
+  const [gpsLat, setGpsLat] = useState('37.7749')
+  const [gpsLng, setGpsLng] = useState('-122.4194')
+  const [batteryLevel, setBatteryLevel] = useState(100)
+  const [deeplinkUrl, setDeeplinkUrl] = useState('')
+  const [notifTitle, setNotifTitle] = useState('Test')
+  const [notifBody, setNotifBody] = useState('From Hermes')
+  const [isRecording, setIsRecording] = useState(false)
+  const [testOutput, setTestOutput] = useState('')
   const imgRef = useRef(null)
 
   const statusQ = useQuery({
@@ -139,6 +150,61 @@ function EmulatorPane({ ctx }) {
     } catch { setShellOut('request failed') }
   }, [ctx, shellCmd])
 
+  const fetchGallery = useCallback(async () => {
+    try {
+      const d = await ctx.rest('/screenshot/gallery', { timeoutMs: 5000 })
+      setGallery(d?.screenshots || [])
+    } catch {}
+  }, [ctx])
+
+  const setGps = useCallback(async () => {
+    haptic('tap')
+    try {
+      await ctx.rest(`/gps/${gpsLat}/${gpsLng}`, { method: 'POST', timeoutMs: 3000 })
+      host.notify({ kind: 'success', message: `GPS: ${gpsLat}, ${gpsLng}` })
+    } catch {}
+  }, [ctx, gpsLat, gpsLng])
+
+  const setBattery = useCallback(async (lvl) => {
+    haptic('tap')
+    setBatteryLevel(lvl)
+    try { await ctx.rest(`/battery/${lvl}`, { method: 'POST', timeoutMs: 3000 }) } catch {}
+  }, [ctx])
+
+  const sendDeeplink = useCallback(async () => {
+    if (!deeplinkUrl) return
+    haptic('tap')
+    try {
+      await ctx.rest(`/deeplink?url=${encodeURIComponent(deeplinkUrl)}`, { method: 'POST', timeoutMs: 3000 })
+    } catch {}
+  }, [ctx, deeplinkUrl])
+
+  const sendNotification = useCallback(async () => {
+    haptic('tap')
+    try {
+      await ctx.rest(`/notification?title=${encodeURIComponent(notifTitle)}&body=${encodeURIComponent(notifBody)}`, { method: 'POST', timeoutMs: 3000 })
+      host.notify({ kind: 'success', message: 'Notification sent' })
+    } catch {}
+  }, [ctx, notifTitle, notifBody])
+
+  const toggleRecording = useCallback(async () => {
+    haptic('tap')
+    if (!isRecording) {
+      try { await ctx.rest('/record/start', { method: 'POST' }); setIsRecording(true) } catch {}
+    } else {
+      try { await ctx.rest('/record/stop', { method: 'POST' }); setIsRecording(false) } catch {}
+    }
+  }, [ctx, isRecording])
+
+  const runTests = useCallback(async () => {
+    haptic('tap')
+    setTestOutput('Running tests...')
+    try {
+      const r = await ctx.rest('/test/run', { method: 'POST', timeoutMs: 300000 })
+      setTestOutput(r?.output || 'No output')
+    } catch { setTestOutput('Test request failed') }
+  }, [ctx])
+
   let screenContent
   if (!isOnline) {
     screenContent = jsx('div', {
@@ -226,7 +292,20 @@ function EmulatorPane({ ctx }) {
                 className: 'flex justify-between items-center',
                 children: [
                   jsx('span', { className: 'font-medium', children: avd.name }),
-                  jsx('span', { className: 'text-zinc-500', children: avd.device || '' }),
+                  jsxs('div', {
+                    className: 'flex gap-1',
+                    children: [
+                      jsx('span', { className: 'text-zinc-500', children: avd.device || '' }),
+                      jsx('button', {
+                        className: 'text-red-400 hover:text-red-300 text-[10px] px-1',
+                        onClick: async (e) => {
+                          e.stopPropagation()
+                          try { await ctx.rest(`/avd/wipe?name=${avd.name}`, { method: 'POST' }); host.notify({ kind: 'info', message: `Wiped ${avd.name}` }) } catch {}
+                        },
+                        children: '🗑',
+                      }),
+                    ],
+                  }),
                 ],
               }),
             })
@@ -462,6 +541,123 @@ function EmulatorPane({ ctx }) {
             key: 'so',
             className: 'rounded bg-zinc-950 border border-zinc-800 p-1 text-[10px] text-zinc-400 max-h-[80px] overflow-auto font-mono whitespace-pre-wrap',
             children: shellOut,
+          }),
+        ],
+      }),
+
+      // More Tools toggle
+      jsx('button', {
+        className: 'flex items-center justify-between rounded-md border border-zinc-700 bg-zinc-800/50 px-2 py-1 text-xs text-zinc-300 hover:bg-zinc-700/50',
+        onClick: () => setShowMore(!showMore),
+        children: [
+          jsx('span', { key: 't', children: '⚡ More Tools' }),
+          jsx('span', { key: 'a', className: 'text-zinc-500', children: showMore ? '▲' : '▼' }),
+        ],
+      }),
+
+      // More Tools panel
+      showMore && jsx('div', {
+        className: 'rounded border border-zinc-700 bg-zinc-900 p-2 space-y-2 max-h-[300px] overflow-y-auto',
+        children: [
+          // GPS
+          jsx('div', { key: 'gps-h', className: 'text-xs text-zinc-400 font-medium', children: '📍 GPS Location' }),
+          jsx('div', {
+            key: 'gps-i',
+            className: 'flex gap-1',
+            children: [
+              jsx('input', { key: 'lat', type: 'text', value: gpsLat, onChange: (e) => setGpsLat(e.target.value), placeholder: 'Lat', className: 'flex-1 rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-xs text-zinc-200 font-mono' }),
+              jsx('input', { key: 'lng', type: 'text', value: gpsLng, onChange: (e) => setGpsLng(e.target.value), placeholder: 'Lng', className: 'flex-1 rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-xs text-zinc-200 font-mono' }),
+              jsx('button', { key: 'set', className: 'rounded border border-blue-700 bg-blue-900/50 px-2 py-1 text-xs text-blue-300', onClick: setGps, children: 'Set' }),
+            ],
+          }),
+
+          // Battery
+          jsx('div', { key: 'bat-h', className: 'text-xs text-zinc-400 font-medium', children: `🔋 Battery: ${batteryLevel}%` }),
+          jsx('div', {
+            key: 'bat-i',
+            className: 'flex gap-1 items-center',
+            children: [
+              jsx('input', { key: 'slider', type: 'range', min: '0', max: '100', value: batteryLevel, onChange: (e) => setBattery(parseInt(e.target.value)), className: 'flex-1' }),
+              jsx('button', { key: 'apply', className: 'rounded border border-blue-700 bg-blue-900/50 px-2 py-1 text-xs text-blue-300', onClick: () => setBattery(batteryLevel), children: 'Set' }),
+              jsx('button', { key: 'reset', className: 'rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-xs text-zinc-300', onClick: async () => { try { await ctx.rest('/battery/reset', { method: 'POST' }); setBatteryLevel(100) } catch {} }, children: 'Reset' }),
+            ],
+          }),
+
+          // Deep Link
+          jsx('div', { key: 'dl-h', className: 'text-xs text-zinc-400 font-medium', children: '🔗 Deep Link' }),
+          jsx('div', {
+            key: 'dl-i',
+            className: 'flex gap-1',
+            children: [
+              jsx('input', { key: 'url', type: 'text', value: deeplinkUrl, onChange: (e) => setDeeplinkUrl(e.target.value), placeholder: 'myapp://path or https://...', className: 'flex-1 rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-xs text-zinc-200 font-mono' }),
+              jsx('button', { key: 'go', className: 'rounded border border-blue-700 bg-blue-900/50 px-2 py-1 text-xs text-blue-300', onClick: sendDeeplink, children: 'Open' }),
+            ],
+          }),
+
+          // Notification
+          jsx('div', { key: 'ntf-h', className: 'text-xs text-zinc-400 font-medium', children: '🔔 Push Notification' }),
+          jsx('div', {
+            key: 'ntf-i',
+            className: 'flex gap-1',
+            children: [
+              jsx('input', { key: 'title', type: 'text', value: notifTitle, onChange: (e) => setNotifTitle(e.target.value), placeholder: 'Title', className: 'flex-1 rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-xs text-zinc-200' }),
+              jsx('input', { key: 'body', type: 'text', value: notifBody, onChange: (e) => setNotifBody(e.target.value), placeholder: 'Body', className: 'flex-1 rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-xs text-zinc-200' }),
+              jsx('button', { key: 'send', className: 'rounded border border-blue-700 bg-blue-900/50 px-2 py-1 text-xs text-blue-300', onClick: sendNotification, children: '🔔' }),
+            ],
+          }),
+
+          // Recording
+          jsx('div', { key: 'rec-h', className: 'text-xs text-zinc-400 font-medium', children: '⏺ Screen Recording' }),
+          jsx('div', {
+            key: 'rec-b',
+            className: 'flex gap-1',
+            children: [
+              jsx('button', {
+                key: 'toggle',
+                className: cn('flex-1 rounded border py-1 text-xs font-medium', isRecording ? 'border-red-700 bg-red-900/50 text-red-300' : 'border-zinc-700 bg-zinc-800 text-zinc-300'),
+                onClick: toggleRecording,
+                children: isRecording ? '⏹ Stop Recording' : '⏺ Start Recording',
+              }),
+            ],
+          }),
+
+          // Test Runner
+          jsx('div', { key: 'test-h', className: 'text-xs text-zinc-400 font-medium', children: '🧪 Test Runner' }),
+          jsx('div', {
+            key: 'test-b',
+            className: 'flex gap-1',
+            children: [
+              jsx('button', { key: 'run', className: 'flex-1 rounded border border-green-700 bg-green-900/50 py-1 text-xs text-green-300 font-medium', onClick: runTests, children: '▶ Run Tests' }),
+            ],
+          }),
+          testOutput && jsx('pre', {
+            key: 'test-out',
+            className: 'rounded bg-zinc-950 border border-zinc-800 p-1 text-[10px] text-zinc-400 max-h-[60px] overflow-auto font-mono whitespace-pre-wrap',
+            children: testOutput,
+          }),
+
+          // Screenshot Gallery
+          jsx('button', {
+            key: 'gal',
+            className: 'w-full flex justify-between items-center rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-xs text-zinc-300 hover:bg-zinc-700',
+            onClick: () => { if (!showGallery) fetchGallery(); setShowGallery(!showGallery) },
+            children: [
+              jsx('span', { children: `🖼 Gallery (${gallery.length})` }),
+              jsx('span', { className: 'text-zinc-500', children: showGallery ? '▲' : '▼' }),
+            ],
+          }),
+          showGallery && jsx('div', {
+            key: 'gal-list',
+            className: 'grid grid-cols-3 gap-1',
+            children: gallery.length === 0
+              ? jsx('div', { className: 'text-xs text-zinc-500 col-span-3', children: 'No screenshots saved' })
+              : gallery.slice(0, 9).map((s) =>
+                jsx('div', {
+                  key: s.name,
+                  className: 'rounded border border-zinc-700 bg-zinc-800 p-1 text-[9px] text-zinc-400 truncate',
+                  children: s.name.replace('.png', ''),
+                })
+              ),
           }),
         ],
       }),
