@@ -779,7 +779,7 @@ export default {
         id: 'pane',
         area: 'panes',
         title: 'Emulator',
-        data: { placement: 'right', width: '280px', dock: { pane: 'workspace', pos: 'right' } },
+        data: { placement: 'main', width: '280px', dock: { pane: 'workspace', pos: 'right' } },
         render: () => jsx(EmulatorPane, { ctx }),
       },
       {
