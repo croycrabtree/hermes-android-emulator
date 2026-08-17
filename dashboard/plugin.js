@@ -9,9 +9,10 @@ import {
   ROUTES_AREA,
   PALETTE_AREA,
   useQuery,
+  Tip,
 } from '@hermes/plugin-sdk'
 import { jsx, jsxs } from 'react/jsx-runtime'
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 
 const ID = 'android-emulator'
 const POLL_MS = 3000
