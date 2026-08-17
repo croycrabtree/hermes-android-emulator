@@ -776,6 +776,23 @@ export default {
           run: () => host.togglePane(ID),
         },
       },
+      {
+        id: 'chip',
+        area: 'statusBar.right',
+        order: 140,
+        render: () => jsx('button', {
+          className: cn(
+            'inline-flex h-full items-center gap-1 px-1.5 text-[0.6875rem] transition-colors',
+            'text-(--ui-text-tertiary) hover:bg-(--chrome-action-hover) hover:text-foreground'
+          ),
+          type: 'button',
+          onClick: () => {
+            haptic('tap')
+            host.togglePane(ID)
+          },
+          children: '📱',
+        }),
+      },
     ])
   },
 }
