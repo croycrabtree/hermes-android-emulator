@@ -16,6 +16,7 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 
 const ID = 'android-emulator'
 const POLL_MS = 3000
+let _setVisible = null
 
 function EmulatorPane({ ctx }) {
   const [visible, setVisible] = useState(true)
