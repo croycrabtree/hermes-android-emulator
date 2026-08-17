@@ -6,6 +6,8 @@ import {
   cn,
   haptic,
   host,
+  ROUTES_AREA,
+  SIDEBAR_NAV_AREA,
   PALETTE_AREA,
   useQuery,
 } from '@hermes/plugin-sdk'
@@ -13,6 +15,7 @@ import { jsx, jsxs } from 'react/jsx-runtime'
 import { useState, useRef, useCallback } from 'react'
 
 const ID = 'android-emulator'
+const PAGE = '/android-emulator'
 const POLL_MS = 3000
 
 function EmulatorPane({ ctx }) {
@@ -763,17 +766,22 @@ export default {
         id: 'pane',
         area: 'panes',
         title: 'Emulator',
-        data: { placement: 'right', width: '280px' },
+        data: { placement: 'right', width: '230px' },
         render: () => jsx(EmulatorPane, { ctx }),
+      },
+      {
+        id: 'nav',
+        area: SIDEBAR_NAV_AREA,
+        data: { path: PAGE, label: 'Emulator', codicon: 'device-mobile' },
       },
       {
         id: 'open',
         area: PALETTE_AREA,
         data: {
           id: `${ID}.open`,
-          label: 'Toggle Android Emulator',
+          label: 'Open Android Emulator',
           keywords: ['android', 'emulator', 'phone', 'device'],
-          run: () => host.togglePane(ID),
+          run: () => host.navigate(PAGE),
         },
       },
     ])
