@@ -10,19 +10,15 @@ import {
   SIDEBAR_NAV_AREA,
   PALETTE_AREA,
   useQuery,
-  Tip,
 } from '@hermes/plugin-sdk'
 import { jsx, jsxs } from 'react/jsx-runtime'
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback } from 'react'
 
 const ID = 'android-emulator'
 const PAGE = '/android-emulator'
 const POLL_MS = 3000
-let _setVisible = null
 
 function EmulatorPane({ ctx }) {
-  const [visible, setVisible] = useState(true)
-  useEffect(() => { _setVisible = setVisible }, [])
   const [showLog, setShowLog] = useState(false)
   const [logcat, setLogcat] = useState([])
   const [autoRefresh, setAutoRefresh] = useState(true)
@@ -250,17 +246,6 @@ function EmulatorPane({ ctx }) {
     })
   }
 
-  if (!visible) {
-    return jsx('div', {
-      className: 'flex items-center justify-center h-full cursor-pointer',
-      onClick: () => setVisible(true),
-      children: jsx('span', {
-        className: 'text-[10px] text-zinc-500 hover:text-zinc-300 writing-mode-vertical',
-        style: { writingMode: 'vertical-rl' },
-        children: '📱 EMU ▶',
-      }),
-    })
-  }
   return jsxs('div', {
     className: 'flex h-full flex-col gap-1.5 p-2 text-xs overflow-hidden',
     children: [
@@ -778,10 +763,10 @@ export default {
   register(ctx) {
     ctx.registerMany([
       {
-        id: 'pane',
-        area: 'panes',
-        title: 'Emulator',
-        data: { placement: 'right', width: '280px', dock: { pane: 'workspace', pos: 'right' } },
+        id: 'page',
+        area: ROUTES_AREA,
+        
+        data: { path: PAGE },
         render: () => jsx(EmulatorPane, { ctx }),
       },
       {
@@ -790,21 +775,6 @@ export default {
         data: { path: PAGE, label: 'Emulator', codicon: 'device-mobile' },
       },
       {
-        id: 'chip',
-        area: 'statusBar.right',
-        order: 140,
-        render: () => jsx(Tip, {
-          label: 'Toggle Emulator',
-          children: jsx('button', {
-            className: cn(
-              'inline-flex h-full items-center gap-1 px-1.5 text-[0.6875rem] transition-colors',
-              'text-(--ui-text-tertiary) hover:bg-(--chrome-action-hover) hover:text-foreground'
-            ),
-            type: 'button',
-            onClick: () => {
-              haptic('tap')
-              if (_setVisible) _setVisible(v => !v)
-            },
             children: '📱 EMU',
           }),
         }),
@@ -816,7 +786,7 @@ export default {
           id: `${ID}.open`,
           label: 'Toggle Android Emulator',
           keywords: ['android', 'emulator', 'phone', 'device'],
-          run: () => { if (_setVisible) _setVisible(v => !v) },
+          run: () => host.navigate(PAGE),
         },
       },
     ])
