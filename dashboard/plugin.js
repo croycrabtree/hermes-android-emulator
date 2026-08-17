@@ -765,7 +765,6 @@ export default {
       {
         id: 'page',
         area: ROUTES_AREA,
-        
         data: { path: PAGE },
         render: () => jsx(EmulatorPane, { ctx }),
       },
@@ -773,11 +772,6 @@ export default {
         id: 'nav',
         area: SIDEBAR_NAV_AREA,
         data: { path: PAGE, label: 'Emulator', codicon: 'device-mobile' },
-      },
-      {
-            children: '📱 EMU',
-          }),
-        }),
       },
       {
         id: 'open',
