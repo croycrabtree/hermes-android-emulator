@@ -301,8 +301,8 @@ function EmulatorPane({ ctx }) {
                           children: jsx('span', {
                             style: {
                               display: 'inline-block',
-                              width: '0.6em',
-                              height: '0.6em',
+                              width: '0.75em',
+                              height: '0.75em',
                               border: '2px solid currentColor',
                               borderRadius: '50%',
                               position: 'relative',
@@ -312,7 +312,7 @@ function EmulatorPane({ ctx }) {
                               style: {
                                 display: 'block',
                                 width: '2px',
-                                height: '0.4em',
+                                height: '0.5em',
                                 background: 'currentColor',
                                 position: 'absolute',
                                 top: '-0.15em',
