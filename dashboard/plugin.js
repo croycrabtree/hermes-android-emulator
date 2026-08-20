@@ -287,14 +287,42 @@ function EmulatorPane({ ctx }) {
                   ['🔙', 'Back', 'BACK'],
                   ['🏠', 'Home', 'HOME'],
                   ['📋', 'Recent', 'APP_SWITCH'],
-                  ['⏼', 'Power', 'POWER'],
-                ].map(([icon, label, key]) =>
+                  ['⏻', 'Power', 'POWER', true],
+                ].map(([icon, label, key, isPower]) =>
                   jsx('button', {
                     key,
                     className: 'flex items-center justify-center rounded border border-zinc-700 bg-zinc-800 py-2 text-zinc-200 hover:bg-zinc-700 active:bg-zinc-600 text-lg',
                     onClick: () => sendKey(key),
                     title: label,
-                    children: icon,
+                    children: isPower
+                      ? jsx('span', {
+                          className: 'inline-block relative',
+                          style: { width: '1em', height: '1em' },
+                          children: jsx('span', {
+                            style: {
+                              display: 'inline-block',
+                              width: '0.6em',
+                              height: '0.6em',
+                              border: '2px solid currentColor',
+                              borderRadius: '50%',
+                              position: 'relative',
+                              top: '0.05em',
+                            },
+                            children: jsx('span', {
+                              style: {
+                                display: 'block',
+                                width: '2px',
+                                height: '0.4em',
+                                background: 'currentColor',
+                                position: 'absolute',
+                                top: '-0.15em',
+                                left: '50%',
+                                transform: 'translateX(-50%)',
+                              },
+                            }),
+                          }),
+                        })
+                      : icon,
                   })
                 ),
               }),
