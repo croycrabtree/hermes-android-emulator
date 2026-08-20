@@ -291,13 +291,10 @@ function EmulatorPane({ ctx }) {
                 ].map(([icon, label, key]) =>
                   jsx('button', {
                     key,
-                    className: 'flex flex-col items-center gap-0.5 rounded border border-zinc-700 bg-zinc-800 py-1.5 text-zinc-200 hover:bg-zinc-700 active:bg-zinc-600',
+                    className: 'flex items-center justify-center rounded border border-zinc-700 bg-zinc-800 py-2 text-zinc-200 hover:bg-zinc-700 active:bg-zinc-600 text-lg',
                     onClick: () => sendKey(key),
                     title: label,
-                    children: [
-                      jsx('span', { className: 'text-base', children: icon }),
-                      jsx('span', { children: label }),
-                    ],
+                    children: icon,
                   })
                 ),
               }),
