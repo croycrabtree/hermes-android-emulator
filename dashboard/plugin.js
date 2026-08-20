@@ -306,7 +306,7 @@ function EmulatorPane({ ctx }) {
                               border: '2px solid currentColor',
                               borderRadius: '50%',
                               position: 'relative',
-                              top: '0.05em',
+                              top: '-0.05em',
                             },
                             children: jsx('span', {
                               style: {
