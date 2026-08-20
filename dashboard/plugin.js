@@ -41,21 +41,20 @@ function EmulatorPane({ ctx }) {
   // SVG Icons
   const Icon = ({ d, size = 18 }) => jsx("svg", { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round", children: jsx("path", { d }) })
   const icons = {
-    statusBar: "M4 6h16M4 12h16M4 18h16",  // three horizontal lines (notification shade)
+    statusBar: "M5 2h14v6H5z M7 7h10v15H7z",  // three horizontal lines (notification shade)
     back: "M19 12H5M12 19l-7-7 7-7",        // arrow pointing left
     home: "M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z M9 22V12h6v10", // house
-    recent: "M4 4h16v16H4z M9 4v16 M4 9h16", // grid/squares
+    recent: "M8 2h8v20H8z M1 6h5v12H1z M18 6h5v12H18z", // grid/squares
     power: "M12 2v6 M18.36 6.64a9 9 0 1 1-12.73 0", // power symbol
-    appDrawer: "M4 4h4v4H4z M10 4h4v4h-4z M16 4h4v4h-4z M4 10h4v4H4z M10 10h4v4h-4z M16 10h4v4h-4z", // 2x3 grid
+    appDrawer: "M5 16h14v6H5z M7 2h10v15H7z", // 2x3 grid
     screenshot: "M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z M12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z", // camera
-    network: "M1 1l22 22 M16.72 11.06A10.94 10.94 0 0 1 19 12.55 M5 12.55a10.94 10.94 0 0 1 5.17-2.39 M10.71 5.05A16 16 0 0 1 22.56 9 M1.42 9a15.91 15.91 0 0 1 4.7-2.88 M8.53 16.11a6 6 0 0 1 6.95 0 M12 20h.01", // wifi signal
+    network: "M6 3h12v10H6z M12 13v8 M4 21h16", // wifi signal
     record: "M12 12m-8 0a8 8 0 1 0 16 0 8 8 0 1 0-16 0", // circle (record)
     shell: "M4 17l6-5-6-5 M12 19h8", // terminal prompt >_
     pause: "M6 4h4v16H6z M14 4h4v16h-4z",  // two vertical bars (pause)
     play: "M5 3l14 9-14 9z",  // triangle (play/live)
     logcat: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8",  // document with lines
     stop: "M6 6h12v12H6z",  // square (stop)
-  }
   }
 
   const statusQ = useQuery({
@@ -322,12 +321,12 @@ function EmulatorPane({ ctx }) {
               jsx('div', {
                 className: 'grid grid-cols-6 gap-1',
                 children: [
-                  ['statusBar', 'Status Bar', () => ctx.rest('/swipe/status_bar', { method: 'POST' })],
+                  ['statusBar', 'Status Bar', async () => { try { const r = await ctx.rest('/swipe/status_bar', { method: 'POST', timeoutMs: 5000 }); host.notify({ kind: r?.ok ? 'success' : 'error', message: r?.ok ? 'Status bar opened' : 'Status bar failed' }) } catch (e) { host.notify({ kind: 'error', message: 'Status bar failed: ' + e.message }) } }],
                   ['back', 'Back', 'BACK'],
                   ['home', 'Home', 'HOME'],
                   ['recent', 'Recent', 'APP_SWITCH'],
                   ['power', 'Power', 'POWER'],
-                  ['appDrawer', 'App Drawer', () => ctx.rest('/swipe/app_drawer', { method: 'POST' })],
+                  ['appDrawer', 'App Drawer', async () => { try { const r = await ctx.rest('/swipe/app_drawer', { method: 'POST', timeoutMs: 5000 }); host.notify({ kind: r?.ok ? 'success' : 'error', message: r?.ok ? 'App drawer opened' : 'App drawer failed' }) } catch (e) { host.notify({ kind: 'error', message: 'App drawer failed: ' + e.message }) } }],
                 ].map(([iconKey, label, action]) =>
                   jsx('button', {
                     key: label,

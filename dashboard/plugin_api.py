@@ -230,8 +230,8 @@ if router is not None:
     @router.post("/swipe/status_bar")
     async def swipe_status_bar():
         """Pull down the Android notification/status bar."""
-        _adb_text("shell", "cmd", "statusbar", "expand-notifications")
-        return {"ok": True}
+        out, rc = _adb_text("shell", "cmd", "statusbar", "expand-notifications")
+        return {"ok": rc == 0, "output": out, "exit_code": rc}
 
     @router.post("/swipe/app_drawer")
     async def swipe_app_drawer():
@@ -243,8 +243,8 @@ if router is not None:
             w, h = 1440, 3120
         cx = w // 2
         # Slow swipe from dock area to middle of screen
-        _adb_text("shell", "input", "swipe", str(cx), str(h - 220), str(cx), str(int(h * 0.25)), "500")
-        return {"ok": True}
+        out, rc = _adb_text("shell", "input", "swipe", str(cx), str(h - 220), str(cx), str(int(h * 0.25)), "500")
+        return {"ok": rc == 0, "output": out, "exit_code": rc}
 
     @router.post("/pinch/{action}")
     async def pinch(action: str):
