@@ -352,18 +352,32 @@ function EmulatorPane({ ctx }) {
               jsx('div', {
                 className: 'grid grid-cols-4 gap-1',
                 children: [
-                  ['left', 'Swipe left', { borderRight: '6px solid currentColor', borderTop: '4px solid transparent', borderBottom: '4px solid transparent' }],
-                  ['up', 'Swipe up', { borderBottom: '6px solid currentColor', borderLeft: '4px solid transparent', borderRight: '4px solid transparent' }],
-                  ['down', 'Swipe down', { borderTop: '6px solid currentColor', borderLeft: '4px solid transparent', borderRight: '4px solid transparent' }],
-                  ['right', 'Swipe right', { borderLeft: '6px solid currentColor', borderTop: '4px solid transparent', borderBottom: '4px solid transparent' }],
-                ].map(([dir, tip, arrowStyle]) =>
+                  ['left', 'Swipe left'],
+                  ['up', 'Swipe up'],
+                  ['down', 'Swipe down'],
+                  ['right', 'Swipe right'],
+                ].map(([dir, tip]) =>
                   jsx('button', {
                     key: dir,
                     className: 'flex items-center justify-center rounded border border-zinc-700 bg-zinc-800 py-1.5 text-zinc-300 hover:bg-zinc-700 active:bg-zinc-600',
                     onClick: () => sendSwipe(dir),
                     title: tip,
-                    children: jsx('span', {
-                      style: { display: 'inline-block', width: 0, height: 0, ...arrowStyle },
+                    children: jsx('svg', {
+                      width: '20',
+                      height: '20',
+                      viewBox: '0 0 20 20',
+                      fill: 'none',
+                      stroke: 'currentColor',
+                      strokeWidth: '2',
+                      strokeLinecap: 'round',
+                      strokeLinejoin: 'round',
+                      children: dir === 'left'
+                        ? jsx('path', { d: 'M13 4L7 10L13 16' })
+                        : dir === 'right'
+                        ? jsx('path', { d: 'M7 4L13 10L7 16' })
+                        : dir === 'up'
+                        ? jsx('path', { d: 'M4 13L10 7L16 13' })
+                        : jsx('path', { d: 'M4 7L10 13L16 7' }),
                     }),
                   })
                 ),
