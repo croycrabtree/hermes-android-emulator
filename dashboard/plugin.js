@@ -351,7 +351,6 @@ function EmulatorPane({ ctx }) {
       screenContent,
 
       // ── NAVIGATION (like a real phone) ───────────────────────────
-      jsx('div', { className: 'text-[10px] text-zinc-500 font-medium uppercase tracking-wide', children: 'Navigation' }),
       jsx('div', {
         className: 'grid grid-cols-4 gap-1',
         children: [
@@ -373,7 +372,6 @@ function EmulatorPane({ ctx }) {
       }),
 
       // ── SWIPE ────────────────────────────────────────────────────
-      jsx('div', { className: 'text-[10px] text-zinc-500 font-medium uppercase tracking-wide', children: 'Swipe' }),
       jsx('div', {
         className: 'grid grid-cols-4 gap-1',
         children: [
@@ -393,7 +391,6 @@ function EmulatorPane({ ctx }) {
       }),
 
       // ── TYPE TEXT ────────────────────────────────────────────────
-      jsx('div', { className: 'text-[10px] text-zinc-500 font-medium uppercase tracking-wide', children: 'Type Text' }),
       jsx('div', {
         className: 'flex gap-1',
         children: [
@@ -455,7 +452,6 @@ function EmulatorPane({ ctx }) {
       }),
 
       // ── QUICK TOOLS ──────────────────────────────────────────────
-      jsx('div', { className: 'text-[10px] text-zinc-500 font-medium uppercase tracking-wide', children: 'Quick Tools' }),
       jsx('div', {
         className: 'grid grid-cols-4 gap-1',
         children: [
