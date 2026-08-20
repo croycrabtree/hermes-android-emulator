@@ -282,17 +282,19 @@ function EmulatorPane({ ctx }) {
 
               // Navigation
               jsx('div', {
-                className: 'grid grid-cols-4 gap-1',
+                className: 'grid grid-cols-6 gap-1',
                 children: [
-                  ['🔙', 'Back', 'BACK'],
-                  ['🏠', 'Home', 'HOME'],
-                  ['📋', 'Recent', 'APP_SWITCH'],
+                  ['📊', 'Status Bar', () => ctx.rest('/swipe/status_bar', { method: 'POST' }), false],
+                  ['🔙', 'Back', 'BACK', false],
+                  ['🏠', 'Home', 'HOME', false],
+                  ['📋', 'Recent', 'APP_SWITCH', false],
                   ['⏻', 'Power', 'POWER', true],
-                ].map(([icon, label, key, isPower]) =>
+                  ['📱', 'App Drawer', () => ctx.rest('/swipe/app_drawer', { method: 'POST' }), false],
+                ].map(([icon, label, action, isPower]) =>
                   jsx('button', {
-                    key,
-                    className: 'flex items-center justify-center rounded border border-zinc-700 bg-zinc-800 py-2 text-zinc-200 hover:bg-zinc-700 active:bg-zinc-600 text-lg',
-                    onClick: () => sendKey(key),
+                    key: label,
+                    className: 'flex items-center justify-center rounded border border-zinc-700 bg-zinc-800 py-2 text-lg text-zinc-200 hover:bg-zinc-700 active:bg-zinc-600',
+                    onClick: () => { haptic('tap'); typeof action === 'function' ? action() : sendKey(action) },
                     title: label,
                     children: isPower
                       ? jsx('span', {
@@ -368,14 +370,12 @@ function EmulatorPane({ ctx }) {
 
               // Quick Tools
               jsx('div', {
-                className: 'grid grid-cols-6 gap-1',
+                className: 'grid grid-cols-4 gap-1',
                 children: [
-                  ['📊', 'Status Bar', async () => { haptic('tap'); try { await ctx.rest('/swipe/status_bar', { method: 'POST' }) } catch {} }],
                   ['📸', 'Screenshot', () => saveScreenshot()],
                   ['🌐', 'Network', () => setShowTools(!showTools)],
                   ['⏺️', 'Record', () => toggleRecording()],
                   ['💻', 'Shell', () => setShowTools(!showTools)],
-                  ['📱', 'App Drawer', async () => { haptic('tap'); try { await ctx.rest('/swipe/app_drawer', { method: 'POST' }) } catch {} }],
                 ].map(([icon, label, fn]) =>
                   jsx('button', {
                     key: label,
