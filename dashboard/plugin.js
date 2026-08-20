@@ -352,17 +352,19 @@ function EmulatorPane({ ctx }) {
               jsx('div', {
                 className: 'grid grid-cols-4 gap-1',
                 children: [
-                  ['↖️', 'left', 'Swipe left'],
-                  ['⬆️', 'up', 'Swipe up'],
-                  ['⬇️', 'down', 'Swipe down'],
-                  ['➡️', 'right', 'Swipe right'],
-                ].map(([icon, dir, tip]) =>
+                  ['left', 'Swipe left', { borderRight: '6px solid currentColor', borderTop: '4px solid transparent', borderBottom: '4px solid transparent' }],
+                  ['up', 'Swipe up', { borderBottom: '6px solid currentColor', borderLeft: '4px solid transparent', borderRight: '4px solid transparent' }],
+                  ['down', 'Swipe down', { borderTop: '6px solid currentColor', borderLeft: '4px solid transparent', borderRight: '4px solid transparent' }],
+                  ['right', 'Swipe right', { borderLeft: '6px solid currentColor', borderTop: '4px solid transparent', borderBottom: '4px solid transparent' }],
+                ].map(([dir, tip, arrowStyle]) =>
                   jsx('button', {
                     key: dir,
-                    className: 'rounded border border-zinc-700 bg-zinc-800 py-1 text-zinc-300 hover:bg-zinc-700 active:bg-zinc-600',
+                    className: 'flex items-center justify-center rounded border border-zinc-700 bg-zinc-800 py-1.5 text-zinc-300 hover:bg-zinc-700 active:bg-zinc-600',
                     onClick: () => sendSwipe(dir),
                     title: tip,
-                    children: icon,
+                    children: jsx('span', {
+                      style: { display: 'inline-block', width: 0, height: 0, ...arrowStyle },
+                    }),
                   })
                 ),
               }),
