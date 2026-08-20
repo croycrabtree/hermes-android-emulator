@@ -227,13 +227,13 @@ if router is not None:
         _adb_text("shell", "input", "swipe", str(x1), str(y1), str(x2), str(y2), "300")
         return {"ok": True, "direction": direction}
 
-    @router.post("/swipe/status_bar")
+    @router.post("/statusbar")
     async def swipe_status_bar():
         """Pull down the Android notification/status bar."""
         out, rc = _adb_text("shell", "cmd", "statusbar", "expand-notifications")
         return {"ok": rc == 0, "output": out, "exit_code": rc}
 
-    @router.post("/swipe/app_drawer")
+    @router.post("/appdrawer")
     async def swipe_app_drawer():
         """Open the app drawer by swiping up from the dock."""
         size_out, _ = _adb_text("shell", "wm", "size")

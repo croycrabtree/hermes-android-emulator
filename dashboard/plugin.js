@@ -321,12 +321,12 @@ function EmulatorPane({ ctx }) {
               jsx('div', {
                 className: 'grid grid-cols-6 gap-1',
                 children: [
-                  ['statusBar', 'Status Bar', async () => { try { const r = await ctx.rest('/swipe/status_bar', { method: 'POST', timeoutMs: 5000 }); host.notify({ kind: r?.ok ? 'success' : 'error', message: r?.ok ? 'Status bar opened' : 'Status bar failed' }) } catch (e) { host.notify({ kind: 'error', message: 'Status bar failed: ' + e.message }) } }],
+                  ['statusBar', 'Status Bar', async () => { try { const r = await ctx.rest('/statusbar', { method: 'POST', timeoutMs: 5000 }); host.notify({ kind: r?.ok ? 'success' : 'error', message: r?.ok ? 'Status bar opened' : 'Status bar failed' }) } catch (e) { host.notify({ kind: 'error', message: 'Status bar failed: ' + e.message }) } }],
                   ['back', 'Back', 'BACK'],
                   ['home', 'Home', 'HOME'],
                   ['recent', 'Recent', 'APP_SWITCH'],
                   ['power', 'Power', 'POWER'],
-                  ['appDrawer', 'App Drawer', async () => { try { const r = await ctx.rest('/swipe/app_drawer', { method: 'POST', timeoutMs: 5000 }); host.notify({ kind: r?.ok ? 'success' : 'error', message: r?.ok ? 'App drawer opened' : 'App drawer failed' }) } catch (e) { host.notify({ kind: 'error', message: 'App drawer failed: ' + e.message }) } }],
+                  ['appDrawer', 'App Drawer', async () => { try { const r = await ctx.rest('/appdrawer', { method: 'POST', timeoutMs: 5000 }); host.notify({ kind: r?.ok ? 'success' : 'error', message: r?.ok ? 'App drawer opened' : 'App drawer failed' }) } catch (e) { host.notify({ kind: 'error', message: 'App drawer failed: ' + e.message }) } }],
                 ].map(([iconKey, label, action]) =>
                   jsx('button', {
                     key: label,
