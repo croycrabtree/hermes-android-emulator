@@ -51,6 +51,11 @@ function EmulatorPane({ ctx }) {
     network: "M1 1l22 22 M16.72 11.06A10.94 10.94 0 0 1 19 12.55 M5 12.55a10.94 10.94 0 0 1 5.17-2.39 M10.71 5.05A16 16 0 0 1 22.56 9 M1.42 9a15.91 15.91 0 0 1 4.7-2.88 M8.53 16.11a6 6 0 0 1 6.95 0 M12 20h.01", // wifi signal
     record: "M12 12m-8 0a8 8 0 1 0 16 0 8 8 0 1 0-16 0", // circle (record)
     shell: "M4 17l6-5-6-5 M12 19h8", // terminal prompt >_
+    pause: "M6 4h4v16H6z M14 4h4v16h-4z",  // two vertical bars (pause)
+    play: "M5 3l14 9-14 9z",  // triangle (play/live)
+    logcat: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8",  // document with lines
+    stop: "M6 6h12v12H6z",  // square (stop)
+  }
   }
 
   const statusQ = useQuery({
@@ -439,24 +444,36 @@ function EmulatorPane({ ctx }) {
                 children: [
                   jsx('button', {
                     className: cn(
-                      'flex-1 rounded border py-1.5 font-medium',
+                      'flex-1 flex items-center justify-center gap-1.5 rounded border py-1.5',
                       autoRefresh ? 'border-blue-700 bg-blue-900/50 text-blue-300' : 'border-zinc-700 bg-zinc-800 text-zinc-200'
                     ),
                     onClick: () => setAutoRefresh(!autoRefresh),
-                    children: autoRefresh ? '⏸ Pause' : '▶ Live',
+                    title: autoRefresh ? 'Pause live view' : 'Resume live view',
+                    children: [
+                      jsx(Icon, { key: 'i', d: autoRefresh ? icons.pause : icons.play, size: 14 }),
+                      jsx('span', { key: 't', children: autoRefresh ? 'Pause' : 'Live' }),
+                    ],
                   }),
                   jsx('button', {
                     className: cn(
-                      'flex-1 rounded border py-1.5 font-medium',
+                      'flex-1 flex items-center justify-center gap-1.5 rounded border py-1.5',
                       showLog ? 'border-amber-700 bg-amber-900/50 text-amber-300' : 'border-zinc-700 bg-zinc-800 text-zinc-200'
                     ),
                     onClick: () => { fetchLogcat(); setShowLog(!showLog) },
-                    children: showLog ? '📜 Hide Log' : '📜 Logcat',
+                    title: showLog ? 'Hide log output' : 'Show log output',
+                    children: [
+                      jsx(Icon, { key: 'i', d: icons.logcat, size: 14 }),
+                      jsx('span', { key: 't', children: showLog ? 'Hide Log' : 'Logcat' }),
+                    ],
                   }),
                   jsx('button', {
-                    className: 'rounded border border-red-700 bg-red-900/50 py-1.5 px-3 font-medium text-red-300',
+                    className: 'flex items-center justify-center gap-1.5 rounded border border-red-700 bg-red-900/50 py-1.5 px-3 text-red-300',
                     onClick: async () => { haptic('tap'); try { await ctx.rest('/stop', { method: 'POST', timeoutMs: 5000 }) } catch {} },
-                    children: '⏹ Stop',
+                    title: 'Stop emulator',
+                    children: [
+                      jsx(Icon, { key: 'i', d: icons.stop, size: 14 }),
+                      jsx('span', { key: 't', children: 'Stop' }),
+                    ],
                   }),
                 ],
               }),
