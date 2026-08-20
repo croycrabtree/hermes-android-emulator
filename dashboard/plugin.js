@@ -243,9 +243,6 @@ function EmulatorPane({ ctx }) {
     })
   }
 
-  // ── RENDER ──────────────────────────────────────────────────────────
-  return jsxs('div', {
-  // ── RENDER ──────────────────────────────────────────────────────────
   const Tab = ({ id, label }) => jsx('button', {
     className: cn(
       'flex-1 py-1 text-xs font-medium border-b-2 transition-colors',
