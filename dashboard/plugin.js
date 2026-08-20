@@ -279,6 +279,25 @@ function EmulatorPane({ ctx }) {
           tab === 'controls' && jsxs('div', {
             className: 'space-y-1.5',
             children: [
+              // Type Text
+              jsx('div', {
+                className: 'flex gap-1',
+                children: [
+                  jsx('input', {
+                    type: 'text',
+                    value: textInput,
+                    onChange: (e) => setTextInput(e.target.value),
+                    onKeyDown: (e) => { if (e.key === 'Enter') sendText() },
+                    placeholder: 'Type text here...',
+                    className: 'flex-1 rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-zinc-200 placeholder-zinc-500 outline-none focus:border-blue-600',
+                  }),
+                  jsx('button', {
+                    className: 'rounded border border-blue-700 bg-blue-900/50 px-3 py-1 text-blue-300 hover:bg-blue-800/50',
+                    onClick: sendText,
+                    children: '⌨️ Send',
+                  }),
+                ],
+              }),
 
               // Navigation
               jsx('div', {
@@ -348,25 +367,6 @@ function EmulatorPane({ ctx }) {
                 ),
               }),
 
-              // Type Text
-              jsx('div', {
-                className: 'flex gap-1',
-                children: [
-                  jsx('input', {
-                    type: 'text',
-                    value: textInput,
-                    onChange: (e) => setTextInput(e.target.value),
-                    onKeyDown: (e) => { if (e.key === 'Enter') sendText() },
-                    placeholder: 'Type text here...',
-                    className: 'flex-1 rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-zinc-200 placeholder-zinc-500 outline-none focus:border-blue-600',
-                  }),
-                  jsx('button', {
-                    className: 'rounded border border-blue-700 bg-blue-900/50 px-3 py-1 text-blue-300 hover:bg-blue-800/50',
-                    onClick: sendText,
-                    children: '⌨️ Send',
-                  }),
-                ],
-              }),
 
               // Quick Tools
               jsx('div', {
