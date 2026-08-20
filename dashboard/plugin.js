@@ -287,7 +287,7 @@ function EmulatorPane({ ctx }) {
                   ['🔙', 'Back', 'BACK'],
                   ['🏠', 'Home', 'HOME'],
                   ['📋', 'Recent', 'APP_SWITCH'],
-                  ['⏻', 'Power', 'POWER'],
+                  ['⏼', 'Power', 'POWER'],
                 ].map(([icon, label, key]) =>
                   jsx('button', {
                     key,
