@@ -36,6 +36,7 @@ function EmulatorPane({ ctx }) {
   const [notifBody, setNotifBody] = useState('From Hermes')
   const [isRecording, setIsRecording] = useState(false)
   const [testOutput, setTestOutput] = useState('')
+  const [tab, setTab] = useState('controls')
   const imgRef = useRef(null)
 
   const statusQ = useQuery({
@@ -244,431 +245,465 @@ function EmulatorPane({ ctx }) {
 
   // ── RENDER ──────────────────────────────────────────────────────────
   return jsxs('div', {
-    className: 'flex h-full flex-col gap-1 p-2 text-xs overflow-y-auto',
+  // ── RENDER ──────────────────────────────────────────────────────────
+  const Tab = ({ id, label }) => jsx('button', {
+    className: cn(
+      'flex-1 py-1 text-xs font-medium border-b-2 transition-colors',
+      tab === id ? 'border-blue-500 text-blue-300' : 'border-transparent text-zinc-500 hover:text-zinc-300'
+    ),
+    onClick: () => setTab(id),
+    children: label,
+  })
+
+  return jsxs('div', {
+    className: 'flex h-full flex-col text-xs overflow-hidden',
     children: [
 
-      // ── STATUS BAR ───────────────────────────────────────────────
+      // ── TAB BAR ──────────────────────────────────────────────────
       jsx('div', {
-        className: cn(
-          'flex items-center gap-2 rounded px-2 py-1 border',
-          isOnline ? 'bg-green-950/30 border-green-800/40 text-green-300'
-                   : 'bg-zinc-900 border-zinc-700 text-zinc-400'
-        ),
-        children: jsxs('div', {
-          className: 'flex items-center gap-1.5 w-full',
-          children: [
-            jsx('span', { className: cn('h-2 w-2 rounded-full', isOnline ? 'bg-green-400 animate-pulse' : 'bg-zinc-500') }),
-            jsx('span', {
-              className: 'font-medium',
-              children: isOnline
-                ? `Android ${status?.android_version || '?'} · SDK ${status?.sdk || '?'}`
-                : 'Offline — click Start below',
-            }),
-          ],
-        }),
-      }),
-
-      // ── DEVICE PICKER ────────────────────────────────────────────
-      jsx('button', {
-        className: 'flex items-center justify-between rounded border border-zinc-700 bg-zinc-800/50 px-2 py-1 text-zinc-300 hover:bg-zinc-700/50',
-        onClick: () => setShowPicker(!showPicker),
+        className: 'flex border-b border-zinc-700 px-2',
         children: [
-          jsx('span', { children: `📱 Device: ${picker?.active_avd || 'None'}` }),
-          jsx('span', { className: 'text-zinc-500', children: showPicker ? '▲' : '▼' }),
+          jsx(Tab, { id: 'controls', label: '🎮 Controls' }),
+          jsx(Tab, { id: 'device', label: '📱 Device' }),
         ],
       }),
-      showPicker && jsx('div', {
-        className: 'rounded border border-zinc-700 bg-zinc-900 p-2 space-y-2 max-h-[300px] overflow-y-auto',
+
+      // ── TAB CONTENT ──────────────────────────────────────────────
+      jsxs('div', {
+        className: 'flex-1 overflow-y-auto p-2 space-y-1.5',
         children: [
-          jsx('div', { className: 'text-zinc-400 font-medium', children: 'Your Devices' }),
-          ...(picker?.avds || []).map((avd) =>
-            jsx('button', {
-              key: avd.name,
-              className: cn(
-                'w-full text-left rounded border px-2 py-1.5 transition-colors',
-                avd.name === picker?.active_avd
-                  ? 'border-blue-700 bg-blue-900/30 text-blue-300'
-                  : 'border-zinc-700 bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-              ),
-              onClick: () => host.notify({ kind: 'info', message: `Switch: emu stop && emu start ${avd.name}` }),
-              children: jsxs('div', {
-                className: 'flex justify-between items-center',
+
+          // ═══════════════════════════════════════════════════════════
+          // CONTROLS TAB
+          // ═══════════════════════════════════════════════════════════
+          tab === 'controls' && jsxs('div', {
+            className: 'space-y-1.5',
+            children: [
+
+              // Screen
+              screenContent,
+
+              // Navigation
+              jsx('div', {
+                className: 'grid grid-cols-4 gap-1',
                 children: [
-                  jsx('span', { className: 'font-medium', children: avd.name }),
-                  jsx('span', { className: 'text-zinc-500 text-[10px]', children: avd.device || '' }),
+                  ['🔙', 'Back', 'BACK'],
+                  ['🏠', 'Home', 'HOME'],
+                  ['📋', 'Recent', 'APP_SWITCH'],
+                  ['⏻', 'Power', 'POWER'],
+                ].map(([icon, label, key]) =>
+                  jsx('button', {
+                    key,
+                    className: 'flex flex-col items-center gap-0.5 rounded border border-zinc-700 bg-zinc-800 py-1.5 text-zinc-200 hover:bg-zinc-700 active:bg-zinc-600',
+                    onClick: () => sendKey(key),
+                    title: label,
+                    children: [
+                      jsx('span', { className: 'text-base', children: icon }),
+                      jsx('span', { children: label }),
+                    ],
+                  })
+                ),
+              }),
+
+              // Swipe
+              jsx('div', {
+                className: 'grid grid-cols-4 gap-1',
+                children: [
+                  ['↖️', 'left', 'Swipe left'],
+                  ['⬆️', 'up', 'Swipe up'],
+                  ['⬇️', 'down', 'Swipe down'],
+                  ['➡️', 'right', 'Swipe right'],
+                ].map(([icon, dir, tip]) =>
+                  jsx('button', {
+                    key: dir,
+                    className: 'rounded border border-zinc-700 bg-zinc-800 py-1 text-zinc-300 hover:bg-zinc-700 active:bg-zinc-600',
+                    onClick: () => sendSwipe(dir),
+                    title: tip,
+                    children: icon,
+                  })
+                ),
+              }),
+
+              // Type Text
+              jsx('div', {
+                className: 'flex gap-1',
+                children: [
+                  jsx('input', {
+                    type: 'text',
+                    value: textInput,
+                    onChange: (e) => setTextInput(e.target.value),
+                    onKeyDown: (e) => { if (e.key === 'Enter') sendText() },
+                    placeholder: 'Type text here...',
+                    className: 'flex-1 rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-zinc-200 placeholder-zinc-500 outline-none focus:border-blue-600',
+                  }),
+                  jsx('button', {
+                    className: 'rounded border border-blue-700 bg-blue-900/50 px-3 py-1 text-blue-300 hover:bg-blue-800/50',
+                    onClick: sendText,
+                    children: '⌨️ Send',
+                  }),
                 ],
               }),
-            })
-          ),
-          jsx('div', { className: 'text-zinc-400 font-medium pt-1 border-t border-zinc-800', children: 'Create New Device' }),
-          jsx('div', {
-            className: 'grid grid-cols-2 gap-1',
-            children: (picker?.devices || []).map((dev) =>
-              jsx('button', {
-                key: dev.id,
-                className: 'text-left rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-zinc-300 hover:bg-zinc-700 truncate',
+
+              // Quick Tools
+              jsx('div', {
+                className: 'grid grid-cols-4 gap-1',
+                children: [
+                  ['📸', 'Screenshot', () => saveScreenshot()],
+                  ['🌐', 'Network', () => setShowTools(!showTools)],
+                  ['⏺️', 'Record', () => toggleRecording()],
+                  ['💻', 'Shell', () => setShowTools(!showTools)],
+                ].map(([icon, label, fn]) =>
+                  jsx('button', {
+                    key: label,
+                    className: 'flex flex-col items-center gap-0.5 rounded border border-zinc-700 bg-zinc-800 py-1.5 text-zinc-300 hover:bg-zinc-700',
+                    onClick: fn,
+                    children: [
+                      jsx('span', { className: 'text-sm', children: icon }),
+                      jsx('span', { children: label }),
+                    ],
+                  })
+                ),
+              }),
+
+              // Network Simulator
+              showTools && jsx('div', {
+                className: 'rounded border border-zinc-700 bg-zinc-900 p-2 space-y-1.5',
+                children: [
+                  jsx('div', { className: 'text-zinc-400 font-medium', children: '🌐 Network Condition' }),
+                  jsx('div', {
+                    className: 'flex gap-1',
+                    children: ['offline', 'slow', 'fast'].map((cond) =>
+                      jsx('button', {
+                        key: cond,
+                        className: 'flex-1 rounded border border-zinc-700 bg-zinc-800 py-1 text-zinc-300 hover:bg-zinc-700',
+                        onClick: () => toggleNetwork(cond),
+                        children: cond,
+                      })
+                    ),
+                  }),
+                  jsx('div', { className: 'text-[10px] text-zinc-500', children: 'offline = no data · slow = 500ms latency · fast = normal' }),
+                  jsx('div', { className: 'text-zinc-400 font-medium pt-1 border-t border-zinc-800', children: '💻 ADB Shell' }),
+                  jsx('div', {
+                    className: 'flex gap-1',
+                    children: [
+                      jsx('input', {
+                        type: 'text',
+                        value: shellCmd,
+                        onChange: (e) => setShellCmd(e.target.value),
+                        onKeyDown: (e) => { if (e.key === 'Enter') runShell() },
+                        placeholder: 'e.g. ls /sdcard',
+                        className: 'flex-1 rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-zinc-200 placeholder-zinc-500 outline-none focus:border-blue-600 font-mono',
+                      }),
+                      jsx('button', {
+                        className: 'rounded border border-blue-700 bg-blue-900/50 px-3 py-1 text-blue-300',
+                        onClick: runShell,
+                        children: 'Run',
+                      }),
+                    ],
+                  }),
+                  shellOut && jsx('pre', {
+                    className: 'rounded bg-zinc-950 border border-zinc-800 p-1 text-[10px] text-zinc-400 max-h-[80px] overflow-auto font-mono whitespace-pre-wrap',
+                    children: shellOut,
+                  }),
+                ],
+              }),
+
+              // Controls bar
+              jsx('div', {
+                className: 'flex gap-1',
+                children: [
+                  jsx('button', {
+                    className: cn(
+                      'flex-1 rounded border py-1.5 font-medium',
+                      autoRefresh ? 'border-blue-700 bg-blue-900/50 text-blue-300' : 'border-zinc-700 bg-zinc-800 text-zinc-200'
+                    ),
+                    onClick: () => setAutoRefresh(!autoRefresh),
+                    children: autoRefresh ? '⏸ Pause' : '▶ Live',
+                  }),
+                  jsx('button', {
+                    className: cn(
+                      'flex-1 rounded border py-1.5 font-medium',
+                      showLog ? 'border-amber-700 bg-amber-900/50 text-amber-300' : 'border-zinc-700 bg-zinc-800 text-zinc-200'
+                    ),
+                    onClick: () => { fetchLogcat(); setShowLog(!showLog) },
+                    children: showLog ? '📜 Hide Log' : '📜 Logcat',
+                  }),
+                  jsx('button', {
+                    className: 'rounded border border-red-700 bg-red-900/50 py-1.5 px-3 font-medium text-red-300',
+                    onClick: async () => { haptic('tap'); try { await ctx.rest('/stop', { method: 'POST', timeoutMs: 5000 }) } catch {} },
+                    children: '⏹ Stop',
+                  }),
+                ],
+              }),
+
+              // Logcat
+              showLog && jsx('div', {
+                className: 'flex-1 min-h-0 overflow-auto rounded bg-zinc-950 border border-zinc-800 p-1 font-mono text-[10px] leading-relaxed',
+                children: logcat.length === 0
+                  ? jsx('div', { className: 'text-zinc-600', children: 'No log output' })
+                  : logcat.map((line, i) =>
+                    jsx('div', {
+                      key: i,
+                      className: cn(
+                        'whitespace-pre-wrap break-all',
+                        line.includes(' E ') ? 'text-red-400' : line.includes(' W ') ? 'text-amber-400' : line.includes(' I ') ? 'text-green-400' : 'text-zinc-500'
+                      ),
+                      children: line,
+                    })
+                  ),
+              }),
+            ],
+          }),
+
+          // ═══════════════════════════════════════════════════════════
+          // DEVICE TAB
+          // ═══════════════════════════════════════════════════════════
+          tab === 'device' && jsxs('div', {
+            className: 'space-y-1.5',
+            children: [
+
+              // Status
+              jsx('div', {
+                className: cn(
+                  'flex items-center gap-2 rounded px-2 py-1 border',
+                  isOnline ? 'bg-green-950/30 border-green-800/40 text-green-300' : 'bg-zinc-900 border-zinc-700 text-zinc-400'
+                ),
+                children: jsxs('div', {
+                  className: 'flex items-center gap-1.5',
+                  children: [
+                    jsx('span', { className: cn('h-2 w-2 rounded-full', isOnline ? 'bg-green-400 animate-pulse' : 'bg-zinc-500') }),
+                    jsx('span', {
+                      className: 'font-medium',
+                      children: isOnline ? `Android ${status?.android_version || '?'} · SDK ${status?.sdk || '?'}` : 'Offline',
+                    }),
+                  ],
+                }),
+              }),
+
+              // Start button (when offline)
+              !isOnline && jsx('button', {
+                className: 'w-full rounded border border-green-700 bg-green-900/50 py-2 text-green-300 font-medium',
                 onClick: async () => {
                   haptic('tap')
-                  const name = `avd-${dev.id}`
-                  try {
-                    const r = await ctx.rest(`/create?name=${name}&device=${dev.id}&api=34`, { method: 'POST', timeoutMs: 60000 })
-                    host.notify({ kind: r?.ok ? 'success' : 'error', message: r?.ok ? `Created ${name}!` : (r?.error || 'Failed') })
-                  } catch { host.notify({ kind: 'error', message: 'Failed' }) }
+                  try { await ctx.rest('/start', { method: 'POST', timeoutMs: 10000 }); host.notify({ kind: 'success', message: 'Starting emulator...' }) } catch { host.notify({ kind: 'error', message: 'Failed to start' }) }
                 },
-                children: dev.name || dev.id,
-              })
-            ),
-          }),
-          jsx('div', { className: 'text-zinc-400 font-medium pt-1 border-t border-zinc-800', children: 'Android Versions' }),
-          jsx('div', {
-            className: 'flex flex-wrap gap-1',
-            children: [
-              ...(picker?.installed_images || []).map((img) =>
-                jsx('span', { key: img.package, className: 'rounded-full border border-green-700 bg-green-900/30 px-2 py-0.5 text-green-300', children: `API ${img.api} ✓` })
-              ),
-              ...(picker?.available_images || []).map((img) =>
-                jsx('button', {
-                  key: img.package,
-                  className: 'rounded-full border border-zinc-700 bg-zinc-800 px-2 py-0.5 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200',
-                  onClick: async () => {
-                    haptic('tap')
-                    host.notify({ kind: 'info', message: `Installing API ${img.api}...` })
-                    try {
-                      const r = await ctx.rest(`/create?name=api${img.api}-test&device=pixel_6&api=${img.api}`, { method: 'POST', timeoutMs: 300000 })
-                      host.notify({ kind: r?.ok ? 'success' : 'error', message: r?.ok ? `API ${img.api} installed!` : (r?.error || 'Failed') })
-                    } catch { host.notify({ kind: 'error', message: 'Failed' }) }
-                  },
-                  children: `API ${img.api}`,
-                })
-              ),
-            ],
-          }),
-          jsx('div', { className: 'text-[10px] text-zinc-600 pt-1', children: 'Green = installed · Gray = click to install' }),
-        ],
-      }),
-
-      // ── EMULATOR SCREEN ──────────────────────────────────────────
-      screenContent,
-
-      // ── NAVIGATION (like a real phone) ───────────────────────────
-      jsx('div', {
-        className: 'grid grid-cols-4 gap-1',
-        children: [
-          ['🔙', 'Back', 'BACK'],
-          ['🏠', 'Home', 'HOME'],
-          ['📋', 'Recent', 'APP_SWITCH'],
-          ['⏻', 'Power', 'POWER'],
-        ].map(([icon, label, key]) =>
-          jsx('button', {
-            key,
-            className: 'flex flex-col items-center gap-0.5 rounded border border-zinc-700 bg-zinc-800 py-1.5 text-zinc-200 hover:bg-zinc-700 active:bg-zinc-600',
-            onClick: () => sendKey(key),
-            children: [
-              jsx('span', { className: 'text-base', children: icon }),
-              jsx('span', { children: label }),
-            ],
-          })
-        ),
-      }),
-
-      // ── SWIPE ────────────────────────────────────────────────────
-      jsx('div', {
-        className: 'grid grid-cols-4 gap-1',
-        children: [
-          ['↖️', 'left', 'Swipe left'],
-          ['⬆️', 'up', 'Swipe up'],
-          ['⬇️', 'down', 'Swipe down'],
-          ['➡️', 'right', 'Swipe right'],
-        ].map(([icon, dir, tip]) =>
-          jsx('button', {
-            key: dir,
-            className: 'rounded border border-zinc-700 bg-zinc-800 py-1 text-zinc-300 hover:bg-zinc-700 active:bg-zinc-600',
-            onClick: () => sendSwipe(dir),
-            title: tip,
-            children: icon,
-          })
-        ),
-      }),
-
-      // ── TYPE TEXT ────────────────────────────────────────────────
-      jsx('div', {
-        className: 'flex gap-1',
-        children: [
-          jsx('input', {
-            type: 'text',
-            value: textInput,
-            onChange: (e) => setTextInput(e.target.value),
-            onKeyDown: (e) => { if (e.key === 'Enter') sendText() },
-            placeholder: 'Type here and press Send...',
-            className: 'flex-1 rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-zinc-200 placeholder-zinc-500 outline-none focus:border-blue-600',
-          }),
-          jsx('button', {
-            className: 'rounded border border-blue-700 bg-blue-900/50 px-3 py-1 text-blue-300 hover:bg-blue-800/50',
-            onClick: sendText,
-            children: '⌨️ Send',
-          }),
-        ],
-      }),
-
-      // ── APPS ─────────────────────────────────────────────────────
-      jsx('button', {
-        className: 'flex items-center justify-between rounded border border-zinc-700 bg-zinc-800/50 px-2 py-1 text-zinc-300 hover:bg-zinc-700/50',
-        onClick: () => { if (!showApps) fetchApps(); setShowApps(!showApps) },
-        children: [
-          jsx('span', { children: '📦 Installed Apps' }),
-          jsx('span', { className: 'text-zinc-500', children: showApps ? '▲' : '▼' }),
-        ],
-      }),
-      showApps && jsx('div', {
-        className: 'rounded border border-zinc-700 bg-zinc-900 p-1 max-h-[200px] overflow-y-auto space-y-0.5',
-        children: apps.length === 0
-          ? jsx('div', { className: 'text-zinc-500 p-1', children: 'Loading apps...' })
-          : [
-              jsx('div', { key: 'uh', className: 'text-[10px] text-blue-400 font-medium px-2 pt-1', children: `📱 Your Apps (${apps.filter(a => a.type === 'user').length})` }),
-              ...apps.filter(a => a.type === 'user').map((app) =>
-                jsx('button', {
-                  key: app.package,
-                  className: 'w-full flex justify-between items-center rounded px-2 py-1 text-zinc-200 hover:bg-zinc-700',
-                  onClick: () => launchApp(app.package),
-                  children: [
-                    jsx('span', { className: 'truncate flex-1 text-left font-medium', children: app.label }),
-                    jsx('span', { className: 'text-zinc-500 text-[10px]', children: '▶ Launch' }),
-                  ],
-                })
-              ),
-              jsx('div', { key: 'sh', className: 'text-[10px] text-zinc-500 font-medium px-2 pt-1 border-t border-zinc-800 mt-1', children: `⚙ System Apps (${apps.filter(a => a.type === 'system').length})` }),
-              ...apps.filter(a => a.type === 'system').map((app) =>
-                jsx('button', {
-                  key: app.package,
-                  className: 'w-full flex justify-between items-center rounded px-2 py-1 text-[10px] text-zinc-400 hover:bg-zinc-700',
-                  onClick: () => launchApp(app.package),
-                  children: [
-                    jsx('span', { className: 'truncate flex-1 text-left', children: app.label }),
-                    jsx('span', { className: 'text-zinc-600 text-[9px]', children: '▶' }),
-                  ],
-                })
-              ),
-            ],
-      }),
-
-      // ── QUICK TOOLS ──────────────────────────────────────────────
-      jsx('div', {
-        className: 'grid grid-cols-4 gap-1',
-        children: [
-          ['📸', 'Screenshot', () => saveScreenshot()],
-          ['🌐', 'Network', () => setShowTools(!showTools)],
-          ['⏺️', 'Record', () => toggleRecording()],
-          ['💻', 'ADB Shell', () => setShowTools(!showTools)],
-        ].map(([icon, label, fn]) =>
-          jsx('button', {
-            key: label,
-            className: 'flex flex-col items-center gap-0.5 rounded border border-zinc-700 bg-zinc-800 py-1.5 text-zinc-300 hover:bg-zinc-700',
-            onClick: fn,
-            children: [
-              jsx('span', { className: 'text-sm', children: icon }),
-              jsx('span', { children: label }),
-            ],
-          })
-        ),
-      }),
-
-      // ── NETWORK SIMULATOR ────────────────────────────────────────
-      showTools && jsx('div', {
-        className: 'rounded border border-zinc-700 bg-zinc-900 p-2 space-y-1.5',
-        children: [
-          jsx('div', { className: 'text-zinc-400 font-medium', children: '🌐 Network Condition' }),
-          jsx('div', {
-            className: 'flex gap-1',
-            children: ['offline', 'slow', 'fast'].map((cond) =>
-              jsx('button', {
-                key: cond,
-                className: 'flex-1 rounded border border-zinc-700 bg-zinc-800 py-1 text-zinc-300 hover:bg-zinc-700',
-                onClick: () => toggleNetwork(cond),
-                children: cond,
-              })
-            ),
-          }),
-          jsx('div', { className: 'text-[10px] text-zinc-500', children: 'offline = no data · slow = 500ms latency · fast = normal' }),
-          jsx('div', { className: 'text-zinc-400 font-medium pt-1 border-t border-zinc-800', children: '💻 ADB Shell Command' }),
-          jsx('div', {
-            className: 'flex gap-1',
-            children: [
-              jsx('input', {
-                type: 'text',
-                value: shellCmd,
-                onChange: (e) => setShellCmd(e.target.value),
-                onKeyDown: (e) => { if (e.key === 'Enter') runShell() },
-                placeholder: 'e.g. ls /sdcard',
-                className: 'flex-1 rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-zinc-200 placeholder-zinc-500 outline-none focus:border-blue-600 font-mono',
+                children: '▶ Start Emulator',
               }),
+
+              // Device Picker
               jsx('button', {
-                className: 'rounded border border-blue-700 bg-blue-900/50 px-3 py-1 text-blue-300',
-                onClick: runShell,
-                children: 'Run',
+                className: 'flex items-center justify-between rounded border border-zinc-700 bg-zinc-800/50 px-2 py-1 text-zinc-300 hover:bg-zinc-700/50',
+                onClick: () => setShowPicker(!showPicker),
+                children: [
+                  jsx('span', { children: `📱 Device: ${picker?.active_avd || 'None'}` }),
+                  jsx('span', { className: 'text-zinc-500', children: showPicker ? '▲' : '▼' }),
+                ],
+              }),
+              showPicker && jsx('div', {
+                className: 'rounded border border-zinc-700 bg-zinc-900 p-2 space-y-2 max-h-[300px] overflow-y-auto',
+                children: [
+                  jsx('div', { className: 'text-zinc-400 font-medium', children: 'Your Devices' }),
+                  ...(picker?.avds || []).map((avd) =>
+                    jsx('button', {
+                      key: avd.name,
+                      className: cn(
+                        'w-full text-left rounded border px-2 py-1.5 transition-colors',
+                        avd.name === picker?.active_avd ? 'border-blue-700 bg-blue-900/30 text-blue-300' : 'border-zinc-700 bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                      ),
+                      onClick: () => host.notify({ kind: 'info', message: `Switch: emu stop && emu start ${avd.name}` }),
+                      children: jsxs('div', {
+                        className: 'flex justify-between items-center',
+                        children: [
+                          jsx('span', { className: 'font-medium', children: avd.name }),
+                          jsx('span', { className: 'text-zinc-500 text-[10px]', children: avd.device || '' }),
+                        ],
+                      }),
+                    })
+                  ),
+                  jsx('div', { className: 'text-zinc-400 font-medium pt-1 border-t border-zinc-800', children: 'Create New Device' }),
+                  jsx('div', {
+                    className: 'grid grid-cols-2 gap-1',
+                    children: (picker?.devices || []).map((dev) =>
+                      jsx('button', {
+                        key: dev.id,
+                        className: 'text-left rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-zinc-300 hover:bg-zinc-700 truncate',
+                        onClick: async () => {
+                          haptic('tap')
+                          const name = `avd-${dev.id}`
+                          try {
+                            const r = await ctx.rest(`/create?name=${name}&device=${dev.id}&api=34`, { method: 'POST', timeoutMs: 60000 })
+                            host.notify({ kind: r?.ok ? 'success' : 'error', message: r?.ok ? `Created ${name}!` : (r?.error || 'Failed') })
+                          } catch { host.notify({ kind: 'error', message: 'Failed' }) }
+                        },
+                        children: dev.name || dev.id,
+                      })
+                    ),
+                  }),
+                  jsx('div', { className: 'text-zinc-400 font-medium pt-1 border-t border-zinc-800', children: 'Android Versions' }),
+                  jsx('div', {
+                    className: 'flex flex-wrap gap-1',
+                    children: [
+                      ...(picker?.installed_images || []).map((img) =>
+                        jsx('span', { key: img.package, className: 'rounded-full border border-green-700 bg-green-900/30 px-2 py-0.5 text-green-300', children: `API ${img.api} ✓` })
+                      ),
+                      ...(picker?.available_images || []).map((img) =>
+                        jsx('button', {
+                          key: img.package,
+                          className: 'rounded-full border border-zinc-700 bg-zinc-800 px-2 py-0.5 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200',
+                          onClick: async () => {
+                            haptic('tap')
+                            host.notify({ kind: 'info', message: `Installing API ${img.api}...` })
+                            try {
+                              const r = await ctx.rest(`/create?name=api${img.api}-test&device=pixel_6&api=${img.api}`, { method: 'POST', timeoutMs: 300000 })
+                              host.notify({ kind: r?.ok ? 'success' : 'error', message: r?.ok ? `API ${img.api} installed!` : (r?.error || 'Failed') })
+                            } catch { host.notify({ kind: 'error', message: 'Failed' }) }
+                          },
+                          children: `API ${img.api}`,
+                        })
+                      ),
+                    ],
+                  }),
+                  jsx('div', { className: 'text-[10px] text-zinc-600 pt-1', children: 'Green = installed · Gray = click to install' }),
+                ],
+              }),
+
+              // Apps
+              jsx('button', {
+                className: 'flex items-center justify-between rounded border border-zinc-700 bg-zinc-800/50 px-2 py-1 text-zinc-300 hover:bg-zinc-700/50',
+                onClick: () => { if (!showApps) fetchApps(); setShowApps(!showApps) },
+                children: [
+                  jsx('span', { children: '📦 Installed Apps' }),
+                  jsx('span', { className: 'text-zinc-500', children: showApps ? '▲' : '▼' }),
+                ],
+              }),
+              showApps && jsx('div', {
+                className: 'rounded border border-zinc-700 bg-zinc-900 p-1 max-h-[200px] overflow-y-auto space-y-0.5',
+                children: apps.length === 0
+                  ? jsx('div', { className: 'text-zinc-500 p-1', children: 'Loading apps...' })
+                  : [
+                      jsx('div', { key: 'uh', className: 'text-[10px] text-blue-400 font-medium px-2 pt-1', children: `📱 Your Apps (${apps.filter(a => a.type === 'user').length})` }),
+                      ...apps.filter(a => a.type === 'user').map((app) =>
+                        jsx('button', {
+                          key: app.package,
+                          className: 'w-full flex justify-between items-center rounded px-2 py-1 text-zinc-200 hover:bg-zinc-700',
+                          onClick: () => launchApp(app.package),
+                          children: [
+                            jsx('span', { className: 'truncate flex-1 text-left font-medium', children: app.label }),
+                            jsx('span', { className: 'text-zinc-500 text-[10px]', children: '▶ Launch' }),
+                          ],
+                        })
+                      ),
+                      jsx('div', { key: 'sh', className: 'text-[10px] text-zinc-500 font-medium px-2 pt-1 border-t border-zinc-800 mt-1', children: `⚙ System Apps (${apps.filter(a => a.type === 'system').length})` }),
+                      ...apps.filter(a => a.type === 'system').map((app) =>
+                        jsx('button', {
+                          key: app.package,
+                          className: 'w-full flex justify-between items-center rounded px-2 py-1 text-[10px] text-zinc-400 hover:bg-zinc-700',
+                          onClick: () => launchApp(app.package),
+                          children: [
+                            jsx('span', { className: 'truncate flex-1 text-left', children: app.label }),
+                            jsx('span', { className: 'text-zinc-600 text-[9px]', children: '▶' }),
+                          ],
+                        })
+                      ),
+                    ],
+              }),
+
+              // Advanced Tools
+              jsx('button', {
+                className: 'flex items-center justify-between rounded border border-zinc-700 bg-zinc-800/50 px-2 py-1 text-zinc-300 hover:bg-zinc-700/50',
+                onClick: () => setShowMore(!showMore),
+                children: [
+                  jsx('span', { children: '⚡ Advanced Tools' }),
+                  jsx('span', { className: 'text-zinc-500', children: showMore ? '▲' : '▼' }),
+                ],
+              }),
+              showMore && jsx('div', {
+                className: 'rounded border border-zinc-700 bg-zinc-900 p-2 space-y-2',
+                children: [
+                  jsx('div', { className: 'text-zinc-400 font-medium', children: '📍 GPS — Fake Location' }),
+                  jsx('div', { className: 'text-[10px] text-zinc-500', children: 'Fake GPS for location-based testing' }),
+                  jsx('div', {
+                    className: 'flex gap-1',
+                    children: [
+                      jsx('input', { type: 'text', value: gpsLat, onChange: (e) => setGpsLat(e.target.value), placeholder: 'Latitude', className: 'flex-1 rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-zinc-200 font-mono' }),
+                      jsx('input', { type: 'text', value: gpsLng, onChange: (e) => setGpsLng(e.target.value), placeholder: 'Longitude', className: 'flex-1 rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-zinc-200 font-mono' }),
+                      jsx('button', { className: 'rounded border border-blue-700 bg-blue-900/50 px-3 py-1 text-blue-300', onClick: setGps, children: 'Set' }),
+                    ],
+                  }),
+
+                  jsx('div', { className: 'text-zinc-400 font-medium pt-1 border-t border-zinc-800', children: `🔋 Battery: ${batteryLevel}%` }),
+                  jsx('div', { className: 'text-[10px] text-zinc-500', children: 'Simulate low battery' }),
+                  jsx('div', {
+                    className: 'flex gap-1 items-center',
+                    children: [
+                      jsx('input', { type: 'range', min: '0', max: '100', value: batteryLevel, onChange: (e) => setBattery(parseInt(e.target.value)), className: 'flex-1' }),
+                      jsx('button', { className: 'rounded border border-blue-700 bg-blue-900/50 px-2 py-1 text-blue-300', onClick: () => setBattery(batteryLevel), children: 'Set' }),
+                      jsx('button', { className: 'rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-zinc-300', onClick: async () => { try { await ctx.rest('/battery/reset', { method: 'POST' }); setBatteryLevel(100) } catch {} }, children: 'Reset' }),
+                    ],
+                  }),
+
+                  jsx('div', { className: 'text-zinc-400 font-medium pt-1 border-t border-zinc-800', children: '🔗 Deep Link' }),
+                  jsx('div', { className: 'text-[10px] text-zinc-500', children: 'Open a URL or app deep link' }),
+                  jsx('div', {
+                    className: 'flex gap-1',
+                    children: [
+                      jsx('input', { type: 'text', value: deeplinkUrl, onChange: (e) => setDeeplinkUrl(e.target.value), placeholder: 'myapp://path or https://...', className: 'flex-1 rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-zinc-200 font-mono' }),
+                      jsx('button', { className: 'rounded border border-blue-700 bg-blue-900/50 px-3 py-1 text-blue-300', onClick: sendDeeplink, children: 'Open' }),
+                    ],
+                  }),
+
+                  jsx('div', { className: 'text-zinc-400 font-medium pt-1 border-t border-zinc-800', children: '🔔 Push Notification' }),
+                  jsx('div', { className: 'text-[10px] text-zinc-500', children: 'Send a test notification' }),
+                  jsx('div', {
+                    className: 'flex gap-1',
+                    children: [
+                      jsx('input', { type: 'text', value: notifTitle, onChange: (e) => setNotifTitle(e.target.value), placeholder: 'Title', className: 'flex-1 rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-zinc-200' }),
+                      jsx('input', { type: 'text', value: notifBody, onChange: (e) => setNotifBody(e.target.value), placeholder: 'Message', className: 'flex-1 rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-zinc-200' }),
+                      jsx('button', { className: 'rounded border border-blue-700 bg-blue-900/50 px-3 py-1 text-blue-300', onClick: sendNotification, children: 'Send' }),
+                    ],
+                  }),
+
+                  jsx('div', { className: 'text-zinc-400 font-medium pt-1 border-t border-zinc-800', children: '⏺️ Screen Recording' }),
+                  jsx('button', {
+                    className: cn('w-full rounded border py-1.5 font-medium', isRecording ? 'border-red-700 bg-red-900/50 text-red-300' : 'border-zinc-700 bg-zinc-800 text-zinc-300'),
+                    onClick: toggleRecording,
+                    children: isRecording ? '⏹ Stop Recording' : '⏺ Start Recording',
+                  }),
+
+                  jsx('div', { className: 'text-zinc-400 font-medium pt-1 border-t border-zinc-800', children: '🧪 Test Runner' }),
+                  jsx('button', { className: 'w-full rounded border border-green-700 bg-green-900/50 py-1.5 text-green-300 font-medium', onClick: runTests, children: '▶ Run Tests' }),
+                  testOutput && jsx('pre', {
+                    className: 'rounded bg-zinc-950 border border-zinc-800 p-1 text-[10px] text-zinc-400 max-h-[60px] overflow-auto font-mono whitespace-pre-wrap',
+                    children: testOutput,
+                  }),
+
+                  jsx('button', {
+                    className: 'w-full flex justify-between items-center rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-zinc-300 hover:bg-zinc-700',
+                    onClick: () => { if (!showGallery) fetchGallery(); setShowGallery(!showGallery) },
+                    children: [
+                      jsx('span', { children: `🖼 Screenshot Gallery (${gallery.length})` }),
+                      jsx('span', { className: 'text-zinc-500', children: showGallery ? '▲' : '▼' }),
+                    ],
+                  }),
+                  showGallery && jsx('div', {
+                    className: 'grid grid-cols-3 gap-1',
+                    children: gallery.length === 0
+                      ? jsx('div', { className: 'text-zinc-500 col-span-3', children: 'No screenshots yet' })
+                      : gallery.slice(0, 9).map((s) =>
+                        jsx('div', { key: s.name, className: 'rounded border border-zinc-700 bg-zinc-800 p-1 text-[9px] text-zinc-400 truncate', children: s.name.replace('.png', '') })
+                      ),
+                  }),
+                ],
+              }),
+
+              // Footer
+              isOnline && status?.screen_size && jsx('div', {
+                className: 'text-center text-[9px] text-zinc-600 mt-1',
+                children: `Screen: ${status.screen_size}`,
               }),
             ],
           }),
-          shellOut && jsx('pre', {
-            className: 'rounded bg-zinc-950 border border-zinc-800 p-1 text-[10px] text-zinc-400 max-h-[80px] overflow-auto font-mono whitespace-pre-wrap',
-            children: shellOut,
-          }),
         ],
-      }),
-
-      // ── ADVANCED TOOLS ───────────────────────────────────────────
-      jsx('button', {
-        className: 'flex items-center justify-between rounded border border-zinc-700 bg-zinc-800/50 px-2 py-1 text-zinc-300 hover:bg-zinc-700/50',
-        onClick: () => setShowMore(!showMore),
-        children: [
-          jsx('span', { children: '⚡ Advanced Tools' }),
-          jsx('span', { className: 'text-zinc-500', children: showMore ? '▲' : '▼' }),
-        ],
-      }),
-      showMore && jsx('div', {
-        className: 'rounded border border-zinc-700 bg-zinc-900 p-2 space-y-2 max-h-[300px] overflow-y-auto',
-        children: [
-          // GPS
-          jsx('div', { className: 'text-zinc-400 font-medium', children: '📍 GPS — Fake Location' }),
-          jsx('div', {
-            className: 'flex gap-1',
-            children: [
-              jsx('input', { type: 'text', value: gpsLat, onChange: (e) => setGpsLat(e.target.value), placeholder: 'Latitude', className: 'flex-1 rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-zinc-200 font-mono' }),
-              jsx('input', { type: 'text', value: gpsLng, onChange: (e) => setGpsLng(e.target.value), placeholder: 'Longitude', className: 'flex-1 rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-zinc-200 font-mono' }),
-              jsx('button', { className: 'rounded border border-blue-700 bg-blue-900/50 px-3 py-1 text-blue-300', onClick: setGps, children: 'Set GPS' }),
-            ],
-          }),
-          jsx('div', { className: 'text-[10px] text-zinc-500', children: 'Set a fake GPS location for testing location-based features' }),
-
-          // Battery
-          jsx('div', { className: 'text-zinc-400 font-medium pt-1 border-t border-zinc-800', children: `🔋 Battery Level: ${batteryLevel}%` }),
-          jsx('div', {
-            className: 'flex gap-1 items-center',
-            children: [
-              jsx('input', { type: 'range', min: '0', max: '100', value: batteryLevel, onChange: (e) => setBattery(parseInt(e.target.value)), className: 'flex-1' }),
-              jsx('button', { className: 'rounded border border-blue-700 bg-blue-900/50 px-2 py-1 text-blue-300', onClick: () => setBattery(batteryLevel), children: 'Set' }),
-              jsx('button', { className: 'rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-zinc-300', onClick: async () => { try { await ctx.rest('/battery/reset', { method: 'POST' }); setBatteryLevel(100) } catch {} }, children: 'Reset' }),
-            ],
-          }),
-          jsx('div', { className: 'text-[10px] text-zinc-500', children: 'Simulate low battery to test battery-aware features' }),
-
-          // Deep Link
-          jsx('div', { className: 'text-zinc-400 font-medium pt-1 border-t border-zinc-800', children: '🔗 Deep Link — Open URL' }),
-          jsx('div', {
-            className: 'flex gap-1',
-            children: [
-              jsx('input', { type: 'text', value: deeplinkUrl, onChange: (e) => setDeeplinkUrl(e.target.value), placeholder: 'myapp://path or https://...', className: 'flex-1 rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-zinc-200 font-mono' }),
-              jsx('button', { className: 'rounded border border-blue-700 bg-blue-900/50 px-3 py-1 text-blue-300', onClick: sendDeeplink, children: 'Open' }),
-            ],
-          }),
-          jsx('div', { className: 'text-[10px] text-zinc-500', children: 'Open a URL or app deep link directly in the emulator' }),
-
-          // Notification
-          jsx('div', { className: 'text-zinc-400 font-medium pt-1 border-t border-zinc-800', children: '🔔 Push Notification' }),
-          jsx('div', {
-            className: 'flex gap-1',
-            children: [
-              jsx('input', { type: 'text', value: notifTitle, onChange: (e) => setNotifTitle(e.target.value), placeholder: 'Title', className: 'flex-1 rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-zinc-200' }),
-              jsx('input', { type: 'text', value: notifBody, onChange: (e) => setNotifBody(e.target.value), placeholder: 'Message body', className: 'flex-1 rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-zinc-200' }),
-              jsx('button', { className: 'rounded border border-blue-700 bg-blue-900/50 px-3 py-1 text-blue-300', onClick: sendNotification, children: 'Send' }),
-            ],
-          }),
-          jsx('div', { className: 'text-[10px] text-zinc-500', children: 'Send a test notification to the emulator' }),
-
-          // Screen Recording
-          jsx('div', { className: 'text-zinc-400 font-medium pt-1 border-t border-zinc-800', children: '⏺️ Screen Recording' }),
-          jsx('button', {
-            className: cn('w-full rounded border py-1.5 font-medium', isRecording ? 'border-red-700 bg-red-900/50 text-red-300' : 'border-zinc-700 bg-zinc-800 text-zinc-300'),
-            onClick: toggleRecording,
-            children: isRecording ? '⏹ Stop Recording' : '⏺ Start Recording',
-          }),
-          jsx('div', { className: 'text-[10px] text-zinc-500', children: isRecording ? 'Recording... click Stop to save' : 'Record emulator screen as MP4' }),
-
-          // Test Runner
-          jsx('div', { className: 'text-zinc-400 font-medium pt-1 border-t border-zinc-800', children: '🧪 Test Runner' }),
-          jsx('button', { className: 'w-full rounded border border-green-700 bg-green-900/50 py-1.5 text-green-300 font-medium', onClick: runTests, children: '▶ Run Instrumented Tests' }),
-          jsx('div', { className: 'text-[10px] text-zinc-500', children: 'Run Android instrumented tests on the emulator' }),
-          testOutput && jsx('pre', {
-            className: 'rounded bg-zinc-950 border border-zinc-800 p-1 text-[10px] text-zinc-400 max-h-[60px] overflow-auto font-mono whitespace-pre-wrap',
-            children: testOutput,
-          }),
-
-          // Screenshot Gallery
-          jsx('button', {
-            className: 'w-full flex justify-between items-center rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-zinc-300 hover:bg-zinc-700 pt-1 border-t border-zinc-800',
-            onClick: () => { if (!showGallery) fetchGallery(); setShowGallery(!showGallery) },
-            children: [
-              jsx('span', { children: `🖼 Screenshot Gallery (${gallery.length})` }),
-              jsx('span', { className: 'text-zinc-500', children: showGallery ? '▲' : '▼' }),
-            ],
-          }),
-          showGallery && jsx('div', {
-            className: 'grid grid-cols-3 gap-1',
-            children: gallery.length === 0
-              ? jsx('div', { className: 'text-zinc-500 col-span-3', children: 'No screenshots saved yet' })
-              : gallery.slice(0, 9).map((s) =>
-                jsx('div', { key: s.name, className: 'rounded border border-zinc-700 bg-zinc-800 p-1 text-[9px] text-zinc-400 truncate', children: s.name.replace('.png', '') })
-              ),
-          }),
-        ],
-      }),
-
-      // ── CONTROLS ─────────────────────────────────────────────────
-      jsx('div', {
-        className: 'flex gap-1 mt-1',
-        children: [
-          jsx('button', {
-            className: cn(
-              'flex-1 rounded border py-1.5 font-medium',
-              autoRefresh ? 'border-blue-700 bg-blue-900/50 text-blue-300'
-                          : 'border-zinc-700 bg-zinc-800 text-zinc-200'
-            ),
-            onClick: () => setAutoRefresh(!autoRefresh),
-            children: autoRefresh ? '⏸ Pause' : '▶ Live',
-          }),
-          jsx('button', {
-            className: cn(
-              'flex-1 rounded border py-1.5 font-medium',
-              showLog ? 'border-amber-700 bg-amber-900/50 text-amber-300'
-                      : 'border-zinc-700 bg-zinc-800 text-zinc-200'
-            ),
-            onClick: () => { fetchLogcat(); setShowLog(!showLog) },
-            children: showLog ? '📜 Hide Log' : '📜 Logcat',
-          }),
-          jsx('button', {
-            className: 'rounded border border-red-700 bg-red-900/50 py-1.5 px-3 font-medium text-red-300',
-            onClick: async () => {
-              haptic('tap')
-              try { await ctx.rest('/stop', { method: 'POST', timeoutMs: 5000 }) } catch {}
-            },
-            children: '⏹ Stop',
-          }),
-        ],
-      }),
-
-      // ── LOGCAT ───────────────────────────────────────────────────
-      showLog && jsx('div', {
-        className: 'flex-1 min-h-0 overflow-auto rounded bg-zinc-950 border border-zinc-800 p-1 font-mono text-[10px] leading-relaxed',
-        children: logcat.length === 0
-          ? jsx('div', { className: 'text-zinc-600', children: 'No log output' })
-          : logcat.map((line, i) =>
-            jsx('div', {
-              key: i,
-              className: cn(
-                'whitespace-pre-wrap break-all',
-                line.includes(' E ') ? 'text-red-400'
-                  : line.includes(' W ') ? 'text-amber-400'
-                  : line.includes(' I ') ? 'text-green-400'
-                  : 'text-zinc-500'
-              ),
-              children: line,
-            })
-          ),
-      }),
-
-      // ── FOOTER ───────────────────────────────────────────────────
-      isOnline && status?.screen_size && jsx('div', {
-        className: 'text-center text-[9px] text-zinc-600 mt-1',
-        children: `Screen: ${status.screen_size}`,
       }),
     ],
   })
