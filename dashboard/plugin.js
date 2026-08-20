@@ -256,6 +256,9 @@ function EmulatorPane({ ctx }) {
     className: 'flex h-full flex-col text-xs overflow-hidden',
     children: [
 
+      // ── EMULATOR SCREEN (always visible) ──────────────────────────
+      screenContent,
+
       // ── TAB BAR ──────────────────────────────────────────────────
       jsx('div', {
         className: 'flex border-b border-zinc-700 px-2',
@@ -276,9 +279,6 @@ function EmulatorPane({ ctx }) {
           tab === 'controls' && jsxs('div', {
             className: 'space-y-1.5',
             children: [
-
-              // Screen
-              screenContent,
 
               // Navigation
               jsx('div', {
