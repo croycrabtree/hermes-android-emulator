@@ -38,6 +38,20 @@ function EmulatorPane({ ctx }) {
   const [testOutput, setTestOutput] = useState('')
   const [tab, setTab] = useState('controls')
   const imgRef = useRef(null)
+  // SVG Icons
+  const Icon = ({ d, size = 18 }) => jsx("svg", { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round", children: jsx("path", { d }) })
+  const icons = {
+    statusBar: "M4 6h16M4 12h16M4 18h16",  // three horizontal lines (notification shade)
+    back: "M19 12H5M12 19l-7-7 7-7",        // arrow pointing left
+    home: "M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z M9 22V12h6v10", // house
+    recent: "M4 4h16v16H4z M9 4v16 M4 9h16", // grid/squares
+    power: "M12 2v6 M18.36 6.64a9 9 0 1 1-12.73 0", // power symbol
+    appDrawer: "M4 4h4v4H4z M10 4h4v4h-4z M16 4h4v4h-4z M4 10h4v4H4z M10 10h4v4h-4z M16 10h4v4h-4z", // 2x3 grid
+    screenshot: "M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z M12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z", // camera
+    network: "M1 1l22 22 M16.72 11.06A10.94 10.94 0 0 1 19 12.55 M5 12.55a10.94 10.94 0 0 1 5.17-2.39 M10.71 5.05A16 16 0 0 1 22.56 9 M1.42 9a15.91 15.91 0 0 1 4.7-2.88 M8.53 16.11a6 6 0 0 1 6.95 0 M12 20h.01", // wifi signal
+    record: "M12 12m-8 0a8 8 0 1 0 16 0 8 8 0 1 0-16 0", // circle (record)
+    shell: "M4 17l6-5-6-5 M12 19h8", // terminal prompt >_
+  }
 
   const statusQ = useQuery({
     queryKey: ['emu', 'status'],
@@ -303,47 +317,19 @@ function EmulatorPane({ ctx }) {
               jsx('div', {
                 className: 'grid grid-cols-6 gap-1',
                 children: [
-                  ['📊', 'Status Bar', () => ctx.rest('/swipe/status_bar', { method: 'POST' }), false],
-                  ['🔙', 'Back', 'BACK', false],
-                  ['🏠', 'Home', 'HOME', false],
-                  ['📋', 'Recent', 'APP_SWITCH', false],
-                  ['⏻', 'Power', 'POWER', true],
-                  ['📱', 'App Drawer', () => ctx.rest('/swipe/app_drawer', { method: 'POST' }), false],
-                ].map(([icon, label, action, isPower]) =>
+                  ['statusBar', 'Status Bar', () => ctx.rest('/swipe/status_bar', { method: 'POST' })],
+                  ['back', 'Back', 'BACK'],
+                  ['home', 'Home', 'HOME'],
+                  ['recent', 'Recent', 'APP_SWITCH'],
+                  ['power', 'Power', 'POWER'],
+                  ['appDrawer', 'App Drawer', () => ctx.rest('/swipe/app_drawer', { method: 'POST' })],
+                ].map(([iconKey, label, action]) =>
                   jsx('button', {
                     key: label,
-                    className: 'flex items-center justify-center rounded border border-zinc-700 bg-zinc-800 py-1 text-lg text-zinc-200 hover:bg-zinc-700 active:bg-zinc-600',
+                    className: 'flex items-center justify-center rounded border border-zinc-700 bg-zinc-800 py-1 text-zinc-200 hover:bg-zinc-700 active:bg-zinc-600',
                     onClick: () => { haptic('tap'); typeof action === 'function' ? action() : sendKey(action) },
                     title: label,
-                    children: isPower
-                      ? jsx('span', {
-                          className: 'inline-block relative',
-                          style: { width: '1em', height: '1em' },
-                          children: jsx('span', {
-                            style: {
-                              display: 'inline-block',
-                              width: '0.75em',
-                              height: '0.75em',
-                              border: '2px solid currentColor',
-                              borderRadius: '50%',
-                              position: 'relative',
-                              top: '-0.12em',
-                            },
-                            children: jsx('span', {
-                              style: {
-                                display: 'block',
-                                width: '2px',
-                                height: '0.5em',
-                                background: 'currentColor',
-                                position: 'absolute',
-                                top: '-0.15em',
-                                left: '50%',
-                                transform: 'translateX(-50%)',
-                              },
-                            }),
-                          }),
-                        })
-                      : icon,
+                    children: jsx(Icon, { d: icons[iconKey] }),
                   })
                 ),
               }),
@@ -388,17 +374,17 @@ function EmulatorPane({ ctx }) {
               jsx('div', {
                 className: 'grid grid-cols-4 gap-1',
                 children: [
-                  ['📸', 'Screenshot', () => saveScreenshot()],
-                  ['🌐', 'Network', () => setShowTools(!showTools)],
-                  ['⏺️', 'Record', () => toggleRecording()],
-                  ['💻', 'Shell', () => setShowTools(!showTools)],
-                ].map(([icon, label, fn]) =>
+                  ['screenshot', 'Screenshot', () => saveScreenshot()],
+                  ['network', 'Network', () => setShowTools(!showTools)],
+                  ['record', 'Record', () => toggleRecording()],
+                  ['shell', 'Shell', () => setShowTools(!showTools)],
+                ].map(([iconKey, label, fn]) =>
                   jsx('button', {
                     key: label,
-                    className: 'flex items-center justify-center rounded border border-zinc-700 bg-zinc-800 py-1 text-lg text-zinc-300 hover:bg-zinc-700',
+                    className: 'flex items-center justify-center rounded border border-zinc-700 bg-zinc-800 py-1 text-zinc-300 hover:bg-zinc-700',
                     onClick: fn,
                     title: label,
-                    children: icon,
+                    children: jsx(Icon, { d: icons[iconKey] }),
                   })
                 ),
               }),
