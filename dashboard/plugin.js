@@ -26,8 +26,6 @@ function EmulatorPane({ ctx }) {
   const [shellCmd, setShellCmd] = useState('')
   const [shellOut, setShellOut] = useState('')
   const [showMore, setShowMore] = useState(false)
-  const [showStatus, setShowStatus] = useState(false)
-  const [showDrawer, setShowDrawer] = useState(false)
   const [gallery, setGallery] = useState([])
   const [showGallery, setShowGallery] = useState(false)
   const [gpsLat, setGpsLat] = useState('37.7749')
@@ -347,12 +345,12 @@ function EmulatorPane({ ctx }) {
               jsx('div', {
                 className: 'grid grid-cols-6 gap-1',
                 children: [
-                  ['📊', 'Status', () => setShowStatus(!showStatus)],
+                  ['📊', 'Status Bar', async () => { haptic('tap'); try { await ctx.rest('/swipe/status_bar', { method: 'POST' }) } catch {} }],
                   ['📸', 'Screenshot', () => saveScreenshot()],
                   ['🌐', 'Network', () => setShowTools(!showTools)],
                   ['⏺️', 'Record', () => toggleRecording()],
                   ['💻', 'Shell', () => setShowTools(!showTools)],
-                  ['📦', 'Apps', () => setShowDrawer(!showDrawer)],
+                  ['📱', 'App Drawer', async () => { haptic('tap'); try { await ctx.rest('/swipe/app_drawer', { method: 'POST' }) } catch {} }],
                 ].map(([icon, label, fn]) =>
                   jsx('button', {
                     key: label,
@@ -366,63 +364,6 @@ function EmulatorPane({ ctx }) {
                 ),
               }),
 
-              // Status Panel
-              showStatus && jsx('div', {
-                className: 'rounded border border-zinc-700 bg-zinc-900 p-2 space-y-1',
-                children: [
-                  jsx('div', { className: 'text-zinc-400 font-medium', children: '📊 Device Status' }),
-                  isOnline ? jsxs('div', {
-                    className: 'space-y-0.5 text-zinc-300',
-                    children: [
-                      jsx('div', { children: `Android: ${status?.android_version || '?'}` }),
-                      jsx('div', { children: `SDK: ${status?.sdk || '?'}` }),
-                      jsx('div', { children: `Model: ${status?.model || '?'}` }),
-                      jsx('div', { children: `Screen: ${status?.screen_size || '?'}` }),
-                      jsx('div', { children: `Density: ${status?.screen_density || '?'}` }),
-                    ],
-                  }) : jsx('div', { className: 'text-zinc-500', children: 'Emulator offline' }),
-                ],
-              }),
-
-              // App Drawer
-              showDrawer && jsx('div', {
-                className: 'rounded border border-zinc-700 bg-zinc-900 p-1 max-h-[200px] overflow-y-auto space-y-0.5',
-                children: apps.length === 0
-                  ? jsx('div', {
-                      className: 'text-zinc-500 p-1',
-                      children: jsx('button', {
-                        className: 'text-blue-400 hover:underline',
-                        onClick: () => fetchApps(),
-                        children: 'Click to load apps',
-                      }),
-                    })
-                  : [
-                      jsx('div', { key: 'uh', className: 'text-[10px] text-blue-400 font-medium px-2 pt-1', children: `📱 Your Apps (${apps.filter(a => a.type === 'user').length})` }),
-                      ...apps.filter(a => a.type === 'user').map((app) =>
-                        jsx('button', {
-                          key: app.package,
-                          className: 'w-full flex justify-between items-center rounded px-2 py-1 text-zinc-200 hover:bg-zinc-700',
-                          onClick: () => launchApp(app.package),
-                          children: [
-                            jsx('span', { className: 'truncate flex-1 text-left font-medium', children: app.label }),
-                            jsx('span', { className: 'text-zinc-500 text-[10px]', children: '▶' }),
-                          ],
-                        })
-                      ),
-                      jsx('div', { key: 'sh', className: 'text-[10px] text-zinc-500 font-medium px-2 pt-1 border-t border-zinc-800 mt-1', children: `⚙ System (${apps.filter(a => a.type === 'system').length})` }),
-                      ...apps.filter(a => a.type === 'system').map((app) =>
-                        jsx('button', {
-                          key: app.package,
-                          className: 'w-full flex justify-between items-center rounded px-2 py-1 text-[10px] text-zinc-400 hover:bg-zinc-700',
-                          onClick: () => launchApp(app.package),
-                          children: [
-                            jsx('span', { className: 'truncate flex-1 text-left', children: app.label }),
-                            jsx('span', { className: 'text-zinc-600 text-[9px]', children: '▶' }),
-                          ],
-                        })
-                      ),
-                    ],
-              }),
 
               // Network Simulator
               showTools && jsx('div', {

@@ -227,6 +227,34 @@ if router is not None:
         _adb_text("shell", "input", "swipe", str(x1), str(y1), str(x2), str(y2), "300")
         return {"ok": True, "direction": direction}
 
+    @router.post("/swipe/status_bar")
+    async def swipe_status_bar():
+        """Pull down the Android status bar from the top of the screen."""
+        # Get screen size
+        size_out, _ = _adb_text("shell", "wm", "size")
+        try:
+            w, h = [int(x) for x in size_out.replace("Physical size: ", "").strip().split("x")]
+        except:
+            w, h = 1080, 2400
+        # Swipe down from very top
+        cx = w // 2
+        _adb_text("shell", "input", "swipe", str(cx), "0", str(cx), str(h // 2), "200")
+        return {"ok": True}
+
+    @router.post("/swipe/app_drawer")
+    async def swipe_app_drawer():
+        """Open the app drawer by swiping up from the bottom."""
+        # Get screen size
+        size_out, _ = _adb_text("shell", "wm", "size")
+        try:
+            w, h = [int(x) for x in size_out.replace("Physical size: ", "").strip().split("x")]
+        except:
+            w, h = 1080, 2400
+        # Swipe up from very bottom
+        cx = w // 2
+        _adb_text("shell", "input", "swipe", str(cx), str(h - 100), str(cx), str(h // 3), "200")
+        return {"ok": True}
+
     @router.post("/pinch/{action}")
     async def pinch(action: str):
         """Pinch in or out (zoom). Uses two-finger swipe."""
