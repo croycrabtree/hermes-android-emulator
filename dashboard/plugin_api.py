@@ -44,7 +44,7 @@ def _device_online() -> bool:
     """Check if emulator-5554 is in adb devices list."""
     out, _ = _run([ADB, "devices"], timeout=5)
     text = out.decode("utf-8", errors="replace")
-    return "emulator-5554" in text and "device" in text.split("emulator-5554", 1)[-1].split("\n", 1)[0]
+    return _EMU_SERIAL in text and "device" in text.split(_EMU_SERIAL, 1)[-1].split("\n", 1)[0]
 
 
 if router is not None:

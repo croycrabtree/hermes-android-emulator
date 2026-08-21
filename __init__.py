@@ -26,7 +26,7 @@ def _adb(*args, timeout=30):
 
 def _adb_shell(*args, timeout=30):
     """Run adb shell <args>."""
-    return _run([ADB, "shell"] + list(args), timeout=timeout)
+    return _run([ADB, "-s", _EMU_SERIAL, "shell"] + list(args), timeout=timeout)
 
 
 def _ok(data):
@@ -407,7 +407,7 @@ def _handle_install(params):
     apk = params.get("apk_path", "")
     if not apk or not os.path.exists(apk):
         return _err(f"APK not found: {apk}")
-    args = [ADB, "install"]
+    args = [ADB, "-s", _EMU_SERIAL, "install"]
     if params.get("replace", True):
         args.append("-r")
     if params.get("grant_permissions", True):
